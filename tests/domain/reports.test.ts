@@ -37,7 +37,9 @@ describe("linked report domain", () => {
       shift: "주간",
       workerNames: [],
       floor: "",
-      copyItems: [],
+      sectionLabel: "",
+      workBlocks: [],
+      closingNote: "",
     })
 
     expect(result).toEqual({
@@ -45,7 +47,7 @@ describe("linked report domain", () => {
       date: "작업 날짜를 입력하세요.",
       workerNames: "출근자를 한 명 이상 선택하세요.",
       floor: "층수를 입력하세요.",
-      copyItems: "복사용 VMB 항목을 한 개 이상 입력하세요.",
+      workBlocks: "작업을 한 개 이상 입력하세요.",
     })
   })
 
@@ -72,10 +74,12 @@ describe("linked report domain", () => {
         shift: "연장",
         workerNames: ["김민수", "이서연"],
         floor: "3층",
-        copyItems: [
-          { vmbCode: "VMB-A12", cableMeter: "12.5", jacketMeter: "3" },
-          { vmbCode: "VMB-B22", cableMeter: "5", jacketMeter: "1" },
+        sectionLabel: "HF",
+        workBlocks: [
+          { title: "A 3층", detailText: "VMB-A12 #1\n케이블 자켓 12.5m" },
+          { title: "B 4층", detailText: "VMB-B22 #2\n케이블 자켓 5m" },
         ],
+        closingNote: "내부작업 완료",
       },
     })
 
@@ -89,10 +93,12 @@ describe("linked report domain", () => {
       workerNames: ["김민수", "이서연"],
       totalWorkers: 2,
       floor: "3층",
-      copyItems: [
-        { vmbCode: "VMB-A12", cableMeter: 12.5, jacketMeter: 3 },
-        { vmbCode: "VMB-B22", cableMeter: 5, jacketMeter: 1 },
+      sectionLabel: "HF",
+      workBlocks: [
+        { title: "A 3층", detailLines: ["VMB-A12 #1", "케이블 자켓 12.5m"] },
+        { title: "B 4층", detailLines: ["VMB-B22 #2", "케이블 자켓 5m"] },
       ],
+      closingNote: "내부작업 완료",
     })
   })
 })

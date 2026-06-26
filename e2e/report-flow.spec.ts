@@ -29,7 +29,7 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await expect(page.getByText("연결할 물량일보를 선택하세요.")).toBeVisible()
   await expect(page.getByText("작업 날짜를 입력하세요.")).toBeVisible()
   await expect(page.getByText("출근자를 한 명 이상 선택하세요.")).toBeVisible()
-  await expect(page.getByText("VMB코드를 입력하세요.")).toBeVisible()
+  await expect(page.getByText("작업 위치/제목을 입력하세요.")).toBeVisible()
   log.push("PASS work invalid: child save without parent and workers was blocked")
 
   await createInlineQuantity(page)
@@ -38,15 +38,27 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await expect(inherited.getByText("2026-06-25")).toBeVisible()
   await expect(inherited.getByText("A")).toBeVisible()
   await expect(inherited.getByText("2호기")).toBeVisible()
-  await expect(page.getByLabel("1번 VMB코드")).toHaveValue("VMB-A12")
-  await expect(page.getByLabel("1번 케이블미터")).toHaveValue("12.5")
+  await expect(page.getByLabel("1번 작업 위치/제목")).toHaveValue("A")
+  await expect(page.getByLabel("1번 작업 내용")).toHaveValue("VMB-A12\n케이블 자켓 12.5m")
   log.push("PASS inline parent: 작업일보 flow created and selected parent 물량일보")
 
   await createWork(page)
   await expect(page.getByText("김민수 · 1명 · 3층")).toBeVisible()
   await expect(page.getByText("2026-06-25 · A · 2호기")).toBeVisible()
   await expect(page.getByLabel("작업일보 복사용 내용")).toHaveText(
-    ["2026-06-25 연장", "김민수 1명", "", "A3층", "1. VMB-A12 12.5 3", "2. VMB-B22 5 1"].join("\n"),
+    [
+      "2026.06.25 연장작업",
+      "김민수",
+      "",
+      "[HF]",
+      "A 3층",
+      "VMB-A12 #1",
+      "케이블 자켓 12.5m",
+      "",
+      "B 4층",
+      "VMB-B22 #2",
+      "케이블 자켓 5m",
+    ].join("\n"),
   )
   log.push("PASS work happy: child 작업일보 saved with paste-ready copy output")
 
@@ -71,7 +83,7 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await saveDownload(page, "작업일보 CSV", `${evidenceDir}/work-report-updated.csv`)
   await expectCsv(
     `${evidenceDir}/work-report-updated.csv`,
-    ['2026-06-25,연장,B,3호기,김민수,1,3층,"1. VMB-A12 12.5 3', '2. VMB-B22 5 1"'].join("\n"),
+    ["2026.06.25 연장작업", "김민수", "", "[HF]", "A 3층"].join("\n"),
   )
   log.push("PASS parent edit CSV: 작업일보 CSV used direct date and selected worker total")
 
@@ -143,12 +155,13 @@ async function createWork(page: Page): Promise<void> {
   await page.getByLabel("구분").selectOption("연장")
   await page.getByLabel("이름 등록").fill("김민수")
   await page.getByRole("button", { name: "이름 추가" }).click()
-  await page.getByLabel("층수").fill("3층")
-  await page.getByLabel("1번 자켓미터").fill("3")
-  await page.getByRole("button", { name: "VMB 항목 추가" }).click()
-  await page.getByLabel("2번 VMB코드").fill("VMB-B22")
-  await page.getByLabel("2번 케이블미터").fill("5")
-  await page.getByLabel("2번 자켓미터").fill("1")
+  await page.getByLabel("대표 층수").fill("3층")
+  await page.getByLabel("작업 분류").fill("HF")
+  await page.getByLabel("1번 작업 위치/제목").fill("A 3층")
+  await page.getByLabel("1번 작업 내용").fill("VMB-A12 #1\n케이블 자켓 12.5m")
+  await page.getByRole("button", { name: "작업 묶음 추가" }).click()
+  await page.getByLabel("2번 작업 위치/제목").fill("B 4층")
+  await page.getByLabel("2번 작업 내용").fill("VMB-B22 #2\n케이블 자켓 5m")
   await page.getByRole("button", { name: "저장" }).click()
 }
 

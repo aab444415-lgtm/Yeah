@@ -30,29 +30,42 @@ describe("report app UI", () => {
       screen.getByLabelText("연결 물량일보"),
       screen.getByRole("option", { name: /RMD-001/u }),
     )
-    expect(screen.getByLabelText("1번 VMB코드")).toHaveDisplayValue("VMB-A12")
-    expect(screen.getByLabelText("1번 케이블미터")).toHaveDisplayValue("12.5")
+    expect(screen.getByLabelText("1번 작업 위치/제목")).toHaveDisplayValue("A")
+    expect(screen.getByLabelText("1번 작업 내용")).toHaveDisplayValue("VMB-A12\n케이블 자켓 12.5m")
     await user.type(screen.getByLabelText("작업 날짜"), "2026-06-26")
     await user.selectOptions(screen.getByLabelText("구분"), "연장")
     await registerWorker(user, "김민수")
     await registerWorker(user, "이서연")
     await user.click(screen.getByRole("button", { name: "이서연" }))
     expect(screen.getByLabelText("작업일보 총원")).toHaveTextContent("1명")
-    await user.type(screen.getByLabelText("층수"), "3층")
-    await user.type(screen.getByLabelText("1번 자켓미터"), "3")
-    await user.click(screen.getByRole("button", { name: "VMB 항목 추가" }))
-    await user.type(screen.getByLabelText("2번 VMB코드"), "VMB-B22")
-    await user.type(screen.getByLabelText("2번 케이블미터"), "5")
-    await user.type(screen.getByLabelText("2번 자켓미터"), "1")
+    await user.type(screen.getByLabelText("대표 층수"), "3층")
+    await user.type(screen.getByLabelText("작업 분류"), "HF")
+    await user.clear(screen.getByLabelText("1번 작업 위치/제목"))
+    await user.type(screen.getByLabelText("1번 작업 위치/제목"), "A 3층")
+    await user.clear(screen.getByLabelText("1번 작업 내용"))
+    await user.type(screen.getByLabelText("1번 작업 내용"), "VMB-A12 #1{enter}케이블 자켓 12.5m")
+    await user.click(screen.getByRole("button", { name: "작업 묶음 추가" }))
+    await user.type(screen.getByLabelText("2번 작업 위치/제목"), "B 4층")
+    await user.type(screen.getByLabelText("2번 작업 내용"), "VMB-B22 #2{enter}케이블 자켓 5m")
     await user.click(screen.getByRole("button", { name: "저장" }))
 
     const workList = screen.getByLabelText("작업일보 목록")
     expect(within(workList).getByText("김민수 · 1명 · 3층")).toBeInTheDocument()
     expect(within(workList).getByText("2026-06-26 · A · 2호기")).toBeInTheDocument()
     expect(within(workList).getByLabelText("작업일보 복사용 내용").textContent).toBe(
-      ["2026-06-26 연장", "김민수 1명", "", "A3층", "1. VMB-A12 12.5 3", "2. VMB-B22 5 1"].join(
-        "\n",
-      ),
+      [
+        "2026.06.26 연장작업",
+        "김민수",
+        "",
+        "[HF]",
+        "A 3층",
+        "VMB-A12 #1",
+        "케이블 자켓 12.5m",
+        "",
+        "B 4층",
+        "VMB-B22 #2",
+        "케이블 자켓 5m",
+      ].join("\n"),
     )
 
     await user.click(screen.getByRole("tab", { name: "통합현황" }))
@@ -80,13 +93,12 @@ describe("report app UI", () => {
       "2026-06-25 / A / 2호기 / RMD-001",
     )
     expect(screen.getByLabelText("상위 물량일보에서 가져온 값")).toHaveTextContent("2026-06-25")
-    expect(screen.getByLabelText("1번 VMB코드")).toHaveDisplayValue("VMB-A12")
-    expect(screen.getByLabelText("1번 케이블미터")).toHaveDisplayValue("12.5")
+    expect(screen.getByLabelText("1번 작업 위치/제목")).toHaveDisplayValue("A")
+    expect(screen.getByLabelText("1번 작업 내용")).toHaveDisplayValue("VMB-A12\n케이블 자켓 12.5m")
 
     await user.type(screen.getByLabelText("작업 날짜"), "2026-06-25")
     await registerWorker(user, "김민수")
-    await user.type(screen.getByLabelText("층수"), "3층")
-    await user.type(screen.getByLabelText("1번 자켓미터"), "0")
+    await user.type(screen.getByLabelText("대표 층수"), "3층")
     await user.click(screen.getByRole("button", { name: "저장" }))
 
     expect(screen.getByText("작업 1건")).toBeInTheDocument()
@@ -166,8 +178,7 @@ async function createWork(user: ReturnType<typeof userEvent.setup>): Promise<voi
   )
   await user.type(screen.getByLabelText("작업 날짜"), "2026-06-25")
   await registerWorker(user, "김민수")
-  await user.type(screen.getByLabelText("층수"), "3층")
-  await user.type(screen.getByLabelText("1번 자켓미터"), "3")
+  await user.type(screen.getByLabelText("대표 층수"), "3층")
   await user.click(screen.getByRole("button", { name: "저장" }))
   await user.click(screen.getByRole("tab", { name: "물량일보" }))
 }

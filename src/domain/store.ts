@@ -1,13 +1,11 @@
 import { z } from "zod"
 import {
-  QuantityReportIdSchema,
   QuantityReportSchema,
   type WorkReport,
-  WorkReportIdSchema,
   WorkReportSchema,
   normalizeWorkerNames,
 } from "./reports"
-import { createCopyItemFromQuantity } from "./workCopy"
+import { StoredReportStoreSchema, migrateStoredWorkReports } from "./storeMigration"
 
 export { exportQuantityCsv, exportWorkCsv } from "./csv"
 export { joinWorkReports, type JoinedResult } from "./linked"
@@ -23,35 +21,6 @@ export const ReportStoreSchema = z.object({
 })
 
 export type ReportStore = z.infer<typeof ReportStoreSchema>
-
-const LegacyWorkReportSchema = z.object({
-  id: WorkReportIdSchema,
-  quantityReportId: QuantityReportIdSchema,
-  name: z.string().min(1),
-  totalWorkers: z.number().int().min(1),
-  floor: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-})
-
-const AttendanceWorkReportSchema = z.object({
-  id: WorkReportIdSchema,
-  quantityReportId: QuantityReportIdSchema,
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  workerNames: z.array(z.string().min(1)).min(1),
-  floor: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-})
-
-const StoredReportStoreSchema = z.object({
-  version: z.literal(1),
-  registeredWorkerNames: z.array(z.string().min(1)).default([]),
-  quantityReports: z.array(QuantityReportSchema),
-  workReports: z.array(
-    z.union([WorkReportSchema, AttendanceWorkReportSchema, LegacyWorkReportSchema]),
-  ),
-})
 
 export type ImportResult =
   | { readonly kind: "success"; readonly message: string; readonly data: ReportStore }
@@ -164,37 +133,7 @@ function parseReportStore(raw: unknown): ReportStore | null {
   const parsed = StoredReportStoreSchema.safeParse(raw)
   if (!parsed.success) return null
 
-  const quantityById = new Map(parsed.data.quantityReports.map((report) => [report.id, report]))
-  const workReports: WorkReport[] = []
-  for (const report of parsed.data.workReports) {
-    if ("copyItems" in report) {
-      workReports.push(report)
-    } else if ("workerNames" in report) {
-      const quantity = quantityById.get(report.quantityReportId)
-      workReports.push(
-        WorkReportSchema.parse({
-          ...report,
-          shift: "주간",
-          copyItems: [createCopyItemFromQuantity(quantity)],
-        }),
-      )
-    } else {
-      const quantity = quantityById.get(report.quantityReportId)
-      workReports.push(
-        WorkReportSchema.parse({
-          id: report.id,
-          quantityReportId: report.quantityReportId,
-          date: quantity?.date ?? report.createdAt.slice(0, 10),
-          shift: "주간",
-          workerNames: [report.name],
-          floor: report.floor,
-          copyItems: [createCopyItemFromQuantity(quantity)],
-          createdAt: report.createdAt,
-          updatedAt: report.updatedAt,
-        }),
-      )
-    }
-  }
+  const workReports = migrateStoredWorkReports(parsed.data.quantityReports, parsed.data.workReports)
 
   return withRegisteredWorkers({
     version: 1,

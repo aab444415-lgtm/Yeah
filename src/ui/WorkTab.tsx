@@ -6,20 +6,15 @@ import {
   type WorkInput,
   type WorkReport,
   createWorkReport,
-  deriveWorkReportView,
   normalizeWorkerNames,
   updateWorkReport,
   validateWorkInput,
 } from "../domain/reports"
 import type { ReportStore } from "../domain/store"
-import {
-  type WorkCopyItemInput,
-  createCopyItemInputFromQuantity,
-  toWorkCopyItemInput,
-} from "../domain/workCopy"
+import type { WorkBlockInput } from "../domain/workCopy"
 import { FormField, ReadOnlyField } from "./FormField"
 import { InlineQuantityCreator } from "./InlineQuantityCreator"
-import { WorkCopyItemsEditor } from "./WorkCopyItemsEditor"
+import { WorkBlocksEditor } from "./WorkBlocksEditor"
 import { WorkFormActions } from "./WorkFormActions"
 import { WorkParentSelector } from "./WorkParentSelector"
 import { WorkParentSummary } from "./WorkParentSummary"
@@ -28,10 +23,12 @@ import { WorkShiftSelect } from "./WorkShiftSelect"
 import { WorkerToggleGroup } from "./WorkerToggleGroup"
 import { EMPTY_WORK_INPUT } from "./workFormDefaults"
 import {
-  clearCopyItemsError,
-  clearQuantityAndCopyErrors,
+  clearQuantityAndWorkBlocksErrors,
+  clearWorkBlocksError,
   clearWorkerNamesError,
 } from "./workFormErrors"
+import { workInputFromReport, workInputWithSelectedQuantity } from "./workFormTransforms"
+import { deriveWorkRows, filterWorkRows } from "./workReportRows"
 
 type WorkTabProps = {
   readonly data: ReportStore
@@ -56,26 +53,8 @@ export function WorkTab(props: WorkTabProps): ReactElement {
   )
   const hasQuantityReports = props.data.quantityReports.length > 0
   const shouldShowQuantityCreator = !hasQuantityReports || showQuantityCreator
-  const joinedRows = useMemo(
-    () =>
-      props.data.workReports.flatMap((workReport) => {
-        const quantity = props.data.quantityReports.find(
-          (report) => report.id === workReport.quantityReportId,
-        )
-        return quantity === undefined ? [] : [deriveWorkReportView(workReport, quantity)]
-      }),
-    [props.data.quantityReports, props.data.workReports],
-  )
-  const rows = useMemo(() => {
-    const query = filter.trim().toLowerCase()
-    if (query.length === 0) return joinedRows
-    return joinedRows.filter((report) =>
-      [report.date, report.line, report.equipmentUnit, report.workerNames.join(" "), report.floor]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    )
-  }, [filter, joinedRows])
+  const joinedRows = useMemo(() => deriveWorkRows(props.data), [props.data])
+  const rows = useMemo(() => filterWorkRows(joinedRows, filter), [filter, joinedRows])
 
   function submit(): void {
     const nextErrors = validateWorkInput(form)
@@ -101,14 +80,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
 
   function startEdit(report: WorkReport): void {
     setEditingId(report.id)
-    setForm({
-      quantityReportId: report.quantityReportId,
-      date: report.date,
-      shift: report.shift,
-      workerNames: report.workerNames,
-      floor: report.floor,
-      copyItems: toWorkCopyItemInput(report.copyItems),
-    })
+    setForm(workInputFromReport(report))
     setErrors({})
     setNotice("")
   }
@@ -128,11 +100,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
       ...props.data,
       quantityReports: [report, ...props.data.quantityReports],
     })
-    setForm({
-      ...form,
-      quantityReportId: report.id,
-      copyItems: [createCopyItemInputFromQuantity(report)],
-    })
+    setForm(workInputWithSelectedQuantity(form, report.id, report))
     setShowQuantityCreator(false)
     setErrors({})
     setNotice("물량일보를 만들고 작업일보에 연결했습니다.")
@@ -162,17 +130,13 @@ export function WorkTab(props: WorkTabProps): ReactElement {
 
   function selectQuantity(quantityReportId: string): void {
     const quantity = props.data.quantityReports.find((report) => report.id === quantityReportId)
-    setForm({
-      ...form,
-      quantityReportId,
-      copyItems: [createCopyItemInputFromQuantity(quantity)],
-    })
-    setErrors(clearQuantityAndCopyErrors(errors))
+    setForm(workInputWithSelectedQuantity(form, quantityReportId, quantity))
+    setErrors(clearQuantityAndWorkBlocksErrors(errors))
   }
 
-  function updateCopyItems(copyItems: readonly WorkCopyItemInput[]): void {
-    setForm({ ...form, copyItems })
-    setErrors(clearCopyItemsError(errors))
+  function updateWorkBlocks(workBlocks: readonly WorkBlockInput[]): void {
+    setForm({ ...form, workBlocks })
+    setErrors(clearWorkBlocksError(errors))
   }
 
   function resetForm(): void {
@@ -224,7 +188,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
           <WorkShiftSelect onChange={(shift) => setForm({ ...form, shift })} value={form.shift} />
           <FormField
             error={errors.floor}
-            label="층수"
+            label="대표 층수"
             name="work-floor"
             onChange={(event) => setForm({ ...form, floor: event.target.value })}
             value={form.floor}
@@ -245,10 +209,14 @@ export function WorkTab(props: WorkTabProps): ReactElement {
           <ReadOnlyField label="총원" value={`${form.workerNames.length}명`} />
         </div>
 
-        <WorkCopyItemsEditor
-          error={errors.copyItems}
-          items={form.copyItems}
-          onChange={updateCopyItems}
+        <WorkBlocksEditor
+          blocks={form.workBlocks}
+          closingNote={form.closingNote}
+          error={errors.workBlocks}
+          onBlocksChange={updateWorkBlocks}
+          onClosingNoteChange={(closingNote) => setForm({ ...form, closingNote })}
+          onSectionLabelChange={(sectionLabel) => setForm({ ...form, sectionLabel })}
+          sectionLabel={form.sectionLabel}
         />
 
         <WorkFormActions editing={editingId.length > 0} notice={notice} onCancel={resetForm} />

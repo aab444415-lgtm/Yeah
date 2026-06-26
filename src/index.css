@@ -41,7 +41,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -67,7 +68,8 @@ button:hover {
 
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible {
   outline: 3px solid var(--info);
   outline-offset: 2px;
 }
@@ -88,7 +90,8 @@ button.danger {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 40px;
   border: 1px solid var(--border);
@@ -99,9 +102,15 @@ select {
 }
 
 input[aria-invalid="true"],
-select[aria-invalid="true"] {
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
   border-color: var(--error);
   background: var(--error-bg);
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
 }
 
 h1,

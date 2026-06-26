@@ -10,8 +10,14 @@ export const WorkCopyItemSchema = z.object({
   jacketMeter: z.number().nonnegative(),
 })
 
+export const WorkBlockSchema = z.object({
+  title: z.string().min(1),
+  detailLines: z.array(z.string().min(1)).min(1),
+})
+
 export type WorkShift = z.infer<typeof WorkShiftSchema>
 export type WorkCopyItem = z.infer<typeof WorkCopyItemSchema>
+export type WorkBlock = z.infer<typeof WorkBlockSchema>
 
 export type WorkCopyItemInput = {
   readonly vmbCode: string
@@ -19,7 +25,13 @@ export type WorkCopyItemInput = {
   readonly jacketMeter: string
 }
 
+export type WorkBlockInput = {
+  readonly title: string
+  readonly detailText: string
+}
+
 export type QuantityCopySource = {
+  readonly line: string
   readonly vmbCode: string
   readonly meterCount: number
 }
@@ -28,16 +40,20 @@ export type WorkCopyTextData = {
   readonly date: string
   readonly shift: WorkShift
   readonly workerNames: readonly string[]
-  readonly totalWorkers: number
-  readonly line: string
-  readonly floor: string
-  readonly copyItems: readonly WorkCopyItem[]
+  readonly sectionLabel: string
+  readonly workBlocks: readonly WorkBlock[]
+  readonly closingNote: string
 }
 
 export const EMPTY_WORK_COPY_ITEM_INPUT: WorkCopyItemInput = {
   vmbCode: "",
   cableMeter: "",
   jacketMeter: "",
+}
+
+export const EMPTY_WORK_BLOCK_INPUT: WorkBlockInput = {
+  title: "",
+  detailText: "",
 }
 
 export function parseWorkShift(value: string): WorkShift {
@@ -63,11 +79,48 @@ export function createCopyItemFromQuantity(quantity: QuantityCopySource | undefi
   return { vmbCode: quantity.vmbCode, cableMeter: quantity.meterCount, jacketMeter: 0 }
 }
 
+export function createWorkBlockInputFromQuantity(
+  quantity: QuantityCopySource | undefined,
+): WorkBlockInput {
+  if (quantity === undefined) return EMPTY_WORK_BLOCK_INPUT
+  return {
+    title: quantity.line,
+    detailText: [quantity.vmbCode, `케이블 자켓 ${formatMeter(quantity.meterCount)}m`].join("\n"),
+  }
+}
+
+export function createWorkBlockFromQuantity(quantity: QuantityCopySource | undefined): WorkBlock {
+  if (quantity === undefined) return { title: "-", detailLines: ["-"] }
+  return WorkBlockSchema.parse({
+    title: quantity.line,
+    detailLines: [quantity.vmbCode, `케이블 자켓 ${formatMeter(quantity.meterCount)}m`],
+  })
+}
+
+export function createWorkBlocksFromCopyItems(
+  items: readonly WorkCopyItem[],
+  title: string,
+): readonly WorkBlock[] {
+  return [
+    WorkBlockSchema.parse({
+      title: title.trim().length > 0 ? title.trim() : "-",
+      detailLines: formatWorkCopyItems(items),
+    }),
+  ]
+}
+
 export function toWorkCopyItemInput(items: readonly WorkCopyItem[]): readonly WorkCopyItemInput[] {
   return items.map((item) => ({
     vmbCode: item.vmbCode,
     cableMeter: formatMeter(item.cableMeter),
     jacketMeter: formatMeter(item.jacketMeter),
+  }))
+}
+
+export function toWorkBlockInput(blocks: readonly WorkBlock[]): readonly WorkBlockInput[] {
+  return blocks.map((block) => ({
+    title: block.title,
+    detailText: block.detailLines.join("\n"),
   }))
 }
 
@@ -83,6 +136,23 @@ export function normalizeWorkCopyItems(
   )
 }
 
+export function normalizeWorkBlocks(items: readonly WorkBlockInput[]): readonly WorkBlock[] {
+  return items.map((item) =>
+    WorkBlockSchema.parse({
+      title: item.title.trim(),
+      detailLines: splitDetailLines(item.detailText),
+    }),
+  )
+}
+
+export function normalizeSectionLabel(value: string): string {
+  return value.trim().replace(/^\[/u, "").replace(/\]$/u, "").trim()
+}
+
+export function normalizeClosingNote(value: string): string {
+  return splitDetailLines(value).join("\n")
+}
+
 export function getWorkCopyItemsError(items: readonly WorkCopyItemInput[]): string | undefined {
   if (items.length === 0) return "복사용 VMB 항목을 한 개 이상 입력하세요."
   for (const item of items) {
@@ -93,26 +163,53 @@ export function getWorkCopyItemsError(items: readonly WorkCopyItemInput[]): stri
   return undefined
 }
 
+export function getWorkBlocksError(items: readonly WorkBlockInput[]): string | undefined {
+  if (items.length === 0) return "작업을 한 개 이상 입력하세요."
+  for (const item of items) {
+    if (item.title.trim().length === 0) return "작업 위치/제목을 입력하세요."
+    if (splitDetailLines(item.detailText).length === 0) return "작업 내용을 입력하세요."
+  }
+  return undefined
+}
+
 export function formatWorkCopyText(data: WorkCopyTextData): string {
-  return [
-    `${data.date} ${data.shift}`,
-    `${data.workerNames.join(", ")} ${data.totalWorkers}명`,
-    "",
-    `${data.line}${data.floor}`,
-    ...formatWorkCopyItems(data.copyItems),
-  ].join("\n")
+  const sectionLabel = normalizeSectionLabel(data.sectionLabel)
+  const closingLines = splitDetailLines(data.closingNote)
+  const lines = [`${formatWorkDate(data.date)} ${data.shift}작업`, data.workerNames.join(" "), ""]
+  if (sectionLabel.length > 0) lines.push(`[${sectionLabel}]`)
+  lines.push(...formatWorkBlocks(data.workBlocks))
+  if (closingLines.length > 0) lines.push("", ...closingLines)
+  return lines.join("\n")
 }
 
 export function formatWorkCopyItems(items: readonly WorkCopyItem[]): readonly string[] {
   return items.map(
     (item, index) =>
-      `${index + 1}. ${item.vmbCode} ${formatMeter(item.cableMeter)} ${formatMeter(item.jacketMeter)}`,
+      `${index + 1}. ${item.vmbCode} #${index + 1} 케이블 ${formatMeter(item.cableMeter)}m 자켓 ${formatMeter(item.jacketMeter)}m`,
   )
+}
+
+function formatWorkBlocks(blocks: readonly WorkBlock[]): readonly string[] {
+  return blocks.flatMap((block, index) => {
+    const prefix = index === 0 ? [] : [""]
+    return [...prefix, block.title, ...block.detailLines]
+  })
+}
+
+function splitDetailLines(value: string): readonly string[] {
+  return value
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
 }
 
 function isNonNegativeNumber(value: string): boolean {
   const parsed = Number(value)
   return value.trim().length > 0 && Number.isFinite(parsed) && parsed >= 0
+}
+
+function formatWorkDate(value: string): string {
+  return value.replaceAll("-", ".")
 }
 
 function formatMeter(value: number): string {

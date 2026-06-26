@@ -4,6 +4,12 @@
   margin-top: var(--space-4);
 }
 
+.work-blocks-editor {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 .compact-heading {
   margin-bottom: 0;
 }
@@ -11,6 +17,11 @@
 .work-copy-list {
   display: grid;
   gap: var(--space-2);
+}
+
+.work-block-list {
+  display: grid;
+  gap: var(--space-3);
 }
 
 .work-copy-row {
@@ -33,6 +44,30 @@
   background: var(--surface-muted);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.work-block {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(180px, 1.2fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-3);
+  background: var(--surface-panel);
+}
+
+.work-block legend {
+  padding: 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.work-block textarea {
+  min-height: 110px;
 }
 
 .icon-button {
@@ -66,6 +101,7 @@
 
 @media (max-width: 760px) {
   .work-copy-row,
+  .work-block,
   .report-row-with-copy {
     grid-template-columns: 1fr;
   }

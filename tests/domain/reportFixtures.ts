@@ -25,7 +25,9 @@ const defaultWorkInput: Omit<WorkInput, "quantityReportId"> = {
   shift: "주간",
   workerNames: ["김민수", "이서연"],
   floor: "3층",
-  copyItems: [{ vmbCode: "VMB-A12", cableMeter: "12.5", jacketMeter: "3" }],
+  sectionLabel: "",
+  workBlocks: [{ title: "A 3층", detailText: "VMB-A12\n케이블 자켓 12.5m" }],
+  closingNote: "",
 }
 
 type QuantityFixtureArgs = {

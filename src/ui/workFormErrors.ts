@@ -5,11 +5,11 @@ export function clearWorkerNamesError(errors: WorkFieldErrors): WorkFieldErrors 
   if (errors.quantityReportId !== undefined) nextErrors.quantityReportId = errors.quantityReportId
   if (errors.date !== undefined) nextErrors.date = errors.date
   if (errors.floor !== undefined) nextErrors.floor = errors.floor
-  if (errors.copyItems !== undefined) nextErrors.copyItems = errors.copyItems
+  if (errors.workBlocks !== undefined) nextErrors.workBlocks = errors.workBlocks
   return nextErrors
 }
 
-export function clearQuantityAndCopyErrors(errors: WorkFieldErrors): WorkFieldErrors {
+export function clearQuantityAndWorkBlocksErrors(errors: WorkFieldErrors): WorkFieldErrors {
   const nextErrors: WorkFieldErrors = {}
   if (errors.date !== undefined) nextErrors.date = errors.date
   if (errors.workerNames !== undefined) nextErrors.workerNames = errors.workerNames
@@ -17,7 +17,7 @@ export function clearQuantityAndCopyErrors(errors: WorkFieldErrors): WorkFieldEr
   return nextErrors
 }
 
-export function clearCopyItemsError(errors: WorkFieldErrors): WorkFieldErrors {
+export function clearWorkBlocksError(errors: WorkFieldErrors): WorkFieldErrors {
   const nextErrors: WorkFieldErrors = {}
   if (errors.quantityReportId !== undefined) nextErrors.quantityReportId = errors.quantityReportId
   if (errors.date !== undefined) nextErrors.date = errors.date

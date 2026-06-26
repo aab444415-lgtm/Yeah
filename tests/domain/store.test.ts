@@ -92,10 +92,9 @@ describe("report store selectors and import/export", () => {
     const data = makeStore({ quantityReports: [quantity], workReports: [work] })
 
     expect(exportQuantityCsv(data)).toContain("날짜,라인,장비호기,RMD번호,VMB코드,미터 수,위치")
-    expect(exportWorkCsv(data)).toContain("날짜,구분,라인,장비호기,출근자,총원,층수,복사용 항목")
-    expect(exportWorkCsv(data)).toContain(
-      "2026-06-25,주간,A,2호기,김민수 / 이서연,2,3층,1. VMB-A12 12.5 3",
-    )
+    expect(exportWorkCsv(data)).toContain("날짜,구분,라인,장비호기,출근자,총원,층수,복사용 내용")
+    expect(exportWorkCsv(data)).toContain("2026.06.25 주간작업")
+    expect(exportWorkCsv(data)).toContain("A 3층\nVMB-A12\n케이블 자켓 12.5m")
     expect(summarizeReports(data)).toEqual([
       {
         date: "2026-06-25",
@@ -117,7 +116,9 @@ describe("report store selectors and import/export", () => {
             workerNames: ["김민수", "이서연"],
             totalWorkers: 2,
             floor: "3층",
-            copyItems: [{ vmbCode: "VMB-A12", cableMeter: 12.5, jacketMeter: 3 }],
+            sectionLabel: "",
+            workBlocks: [{ title: "A 3층", detailLines: ["VMB-A12", "케이블 자켓 12.5m"] }],
+            closingNote: "",
             createdAt: testNow,
             updatedAt: testNow,
           },
@@ -136,9 +137,8 @@ describe("report store selectors and import/export", () => {
     )
     const data = makeStore({ quantityReports: [editedQuantity], workReports: [work] })
 
-    expect(exportWorkCsv(data)).toContain(
-      "2026-06-25,주간,B,3호기,김민수 / 이서연,2,3층,1. VMB-A12 12.5 3",
-    )
+    expect(exportWorkCsv(data)).toContain("2026-06-25,주간,B,3호기,김민수 / 이서연,2,3층")
+    expect(exportWorkCsv(data)).toContain("2026.06.25 주간작업")
     expect(summarizeReports(data)).toEqual([
       {
         date: "2026-06-25",
@@ -181,7 +181,8 @@ describe("report store selectors and import/export", () => {
     })
     const data = makeStore({ quantityReports: [quantity], workReports: [work] })
 
-    expect(exportWorkCsv(data)).toContain("2026-06-27,주간,A,2호기,박지훈,1,3층,1. VMB-A12 12.5 3")
+    expect(exportWorkCsv(data)).toContain("2026-06-27,주간,A,2호기,박지훈,1,3층")
+    expect(exportWorkCsv(data)).toContain("2026.06.27 주간작업")
     expect(summarizeReports(data)).toMatchObject([
       { date: "2026-06-25", quantityCount: 1, workCount: 0 },
       { date: "2026-06-27", quantityCount: 0, workCount: 1, totalWorkers: 1 },

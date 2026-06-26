@@ -1,11 +1,13 @@
 import { z } from "zod"
 import {
-  type WorkCopyItemInput,
-  WorkCopyItemSchema,
+  type WorkBlockInput,
+  WorkBlockSchema,
   type WorkShift,
   WorkShiftSchema,
-  getWorkCopyItemsError,
-  normalizeWorkCopyItems,
+  getWorkBlocksError,
+  normalizeClosingNote,
+  normalizeSectionLabel,
+  normalizeWorkBlocks,
 } from "./workCopy"
 
 export const QuantityReportIdSchema = z.string().min(1).brand("QuantityReportId")
@@ -30,7 +32,9 @@ export type WorkInput = {
   readonly shift: WorkShift
   readonly workerNames: readonly string[]
   readonly floor: string
-  readonly copyItems: readonly WorkCopyItemInput[]
+  readonly sectionLabel: string
+  readonly workBlocks: readonly WorkBlockInput[]
+  readonly closingNote: string
 }
 
 export const QuantityReportSchema = z.object({
@@ -53,7 +57,9 @@ export const WorkReportSchema = z.object({
   shift: WorkShiftSchema,
   workerNames: z.array(z.string().min(1)).min(1),
   floor: z.string().min(1),
-  copyItems: z.array(WorkCopyItemSchema).min(1),
+  sectionLabel: z.string(),
+  workBlocks: z.array(WorkBlockSchema).min(1),
+  closingNote: z.string(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
@@ -114,8 +120,8 @@ export function validateWorkInput(input: WorkInput): WorkFieldErrors {
     errors.workerNames = "출근자를 한 명 이상 선택하세요."
   }
   if (input.floor.trim().length === 0) errors.floor = "층수를 입력하세요."
-  const copyItemsError = getWorkCopyItemsError(input.copyItems)
-  if (copyItemsError !== undefined) errors.copyItems = copyItemsError
+  const workBlocksError = getWorkBlocksError(input.workBlocks)
+  if (workBlocksError !== undefined) errors.workBlocks = workBlocksError
   return errors
 }
 
@@ -157,7 +163,9 @@ export function createWorkReport(args: CreateWorkArgs): WorkReport {
     shift: args.input.shift,
     workerNames: normalizeWorkerNames(args.input.workerNames),
     floor: args.input.floor.trim(),
-    copyItems: normalizeWorkCopyItems(args.input.copyItems),
+    sectionLabel: normalizeSectionLabel(args.input.sectionLabel),
+    workBlocks: normalizeWorkBlocks(args.input.workBlocks),
+    closingNote: normalizeClosingNote(args.input.closingNote),
     createdAt: args.now,
     updatedAt: args.now,
   })
