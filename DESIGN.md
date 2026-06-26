@@ -12,14 +12,20 @@
 | --- | --- | --- | --- |
 | Surface/base | `--surface` | `#f6f8fb` | 전체 배경 |
 | Surface/panel | `--surface-panel` | `#ffffff` | 폼, 목록, 요약 패널 |
+| Surface/elevated | `--surface-elevated` | `#fbfcfe` | 상단 바, 입력 표면, 강조 패널 |
 | Surface-muted | `--surface-muted` | `#eef3f7` | 읽기 전용 값, 빈 상태 |
+| Surface/inset | `--surface-inset` | `#e8eef5` | 복사용 출력, 내부 작업 묶음 |
 | Text/primary | `--text` | `#111827` | 본문, 제목 |
 | Text/secondary | `--text-muted` | `#5b6573` | 보조 설명, 메타 |
 | Border/default | `--border` | `#d7dee8` | 입력, 테이블, 구획선 |
+| Border/strong | `--border-strong` | `#b9c4d2` | 선택, 호버, 정보 밀집 영역 |
 | Accent/primary | `--accent` | `#047857` | 저장, 주요 동작 |
 | Accent/hover | `--accent-hover` | `#065f46` | 주요 동작 hover |
+| Accent/soft | `--accent-soft` | `#dcfce7` | 선택 탭, 활성 출근자 배경 |
 | Status/info | `--info` | `#1d4ed8` | 연결 정보, 요약 강조 |
+| Status/info-soft | `--info-soft` | `#dbeafe` | 보조 정보 배경 |
 | Status/warning | `--warning` | `#b45309` | 주의, 중복 건너뜀 |
+| Status/warning-soft | `--warning-soft` | `#fef3c7` | 주의 배경 |
 | Status/error | `--error` | `#b91c1c` | 오류, 삭제 |
 | Status/error-bg | `--error-bg` | `#fee2e2` | 오류 배경 |
 
@@ -69,6 +75,14 @@ All spacing derives from 4px.
 | `--space-6` | `24px` | Page grid gap |
 | `--space-8` | `32px` | Major separation |
 
+### Shape & Controls
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `--radius-panel` | `8px` | Panels and rows |
+| `--radius-control` | `6px` | Inputs and buttons |
+| `--control-height` | `42px` | Standard input and button height |
+
 ### Grid
 
 - Max content width: `1280px`.
@@ -108,6 +122,15 @@ All spacing derives from 4px.
 - **States**: hover, focus-within, blocked delete.
 - **Accessibility**: command buttons are named with record context.
 - **Motion**: background transition only.
+
+### Metric Chip
+
+- **Structure**: compact inline metric inside the top status strip.
+- **Variants**: neutral, selected-by-context.
+- **Spacing**: `--space-1`, `--space-2`.
+- **States**: hover inherits topbar state only.
+- **Accessibility**: group has an `aria-label` describing current storage status.
+- **Motion**: color and border transitions only.
 
 ## 6. Motion & Interaction
 

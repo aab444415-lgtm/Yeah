@@ -1,5 +1,11 @@
 .worker-panel {
+  display: grid;
+  gap: var(--space-3);
   margin-top: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-3);
+  background: var(--surface-muted);
 }
 
 .worker-register {
@@ -17,12 +23,13 @@
 
 .worker-toggle {
   min-width: 84px;
+  background: var(--surface-panel);
 }
 
 .worker-toggle[aria-pressed="true"] {
   border-color: var(--accent);
-  background: var(--accent);
-  color: var(--surface-panel);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
   font-weight: 700;
 }
 

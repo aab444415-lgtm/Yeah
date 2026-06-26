@@ -30,9 +30,9 @@
   align-items: end;
   gap: var(--space-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   padding: var(--space-3);
-  background: var(--surface-panel);
+  background: var(--surface-elevated);
 }
 
 .work-copy-index {
@@ -40,9 +40,10 @@
   width: 32px;
   height: 40px;
   place-items: center;
-  border-radius: 6px;
-  background: var(--surface-muted);
-  color: var(--text-muted);
+  border-radius: var(--radius-control);
+  background: var(--info-soft);
+  color: var(--info);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -53,10 +54,10 @@
   gap: var(--space-3);
   min-width: 0;
   margin: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-panel);
   padding: var(--space-3);
-  background: var(--surface-panel);
+  background: var(--surface-inset);
 }
 
 .work-block .field {
@@ -74,7 +75,7 @@
 
 .work-block legend {
   padding: 0 var(--space-1);
-  color: var(--text-muted);
+  color: var(--accent-hover);
   font-size: 12px;
   font-weight: 700;
 }
@@ -84,9 +85,9 @@
 }
 
 .work-block-parent-summary {
-  color: var(--text-muted);
+  color: var(--info);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -107,9 +108,10 @@
 .copy-output {
   margin: 0;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-control);
   padding: var(--space-3);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
   color: var(--text);
   overflow-x: auto;
   white-space: pre-wrap;

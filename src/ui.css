@@ -11,20 +11,22 @@
 .report-row,
 .summary-row {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--surface-panel);
 }
 
 .topbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5);
+  border-top: 4px solid var(--accent);
+  padding: var(--space-6);
+  background: var(--surface-elevated);
 }
 
 .eyebrow {
-  color: var(--text-muted);
+  color: var(--accent-hover);
   font-size: 12px;
   font-weight: 600;
 }
@@ -41,19 +43,23 @@
 
 .status-strip span {
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: var(--space-1) var(--space-2);
-  color: var(--text-muted);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .backup-bar {
   margin-top: var(--space-4);
-  padding: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-elevated);
 }
 
 .backup-message {
-  min-height: 22px;
+  min-height: 20px;
   margin-top: var(--space-2);
   font-size: 13px;
 }
@@ -70,11 +76,16 @@
 .tabs {
   margin-top: var(--space-4);
   padding: var(--space-1);
+  background: var(--surface-elevated);
+}
+
+.tab-button {
+  border-color: transparent;
 }
 
 .tab-button[aria-selected="true"] {
   border-color: var(--accent);
-  background: var(--surface-muted);
+  background: var(--accent-soft);
   color: var(--accent-hover);
   font-weight: 700;
 }
@@ -86,18 +97,29 @@ main {
 .view-grid,
 .summary-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.25fr);
-  gap: var(--space-4);
+  grid-template-columns: minmax(340px, 0.82fr) minmax(0, 1.18fr);
+  gap: var(--space-5);
 }
 
 .panel {
-  padding: var(--space-4);
+  padding: var(--space-5);
+  background: var(--surface-elevated);
+}
+
+.form-panel {
+  border-top: 3px solid var(--accent);
+}
+
+.list-panel {
+  border-top: 3px solid var(--info);
 }
 
 .section-heading {
   display: grid;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
 }
 
 .form-grid,
@@ -107,34 +129,6 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
-}
-
-.parent-picker,
-.inline-parent,
-.inline-parent-heading,
-.worker-panel {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.parent-picker {
-  margin-bottom: var(--space-3);
-}
-
-.inline-parent {
-  margin-bottom: var(--space-4);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: var(--space-3) 0;
-}
-
-.inline-parent-heading {
-  gap: var(--space-1);
-}
-
-.inline-parent-heading span {
-  color: var(--text-muted);
-  font-size: 13px;
 }
 
 .field {
@@ -158,7 +152,8 @@ main {
   display: grid;
   gap: var(--space-1);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-control);
   padding: var(--space-3);
   background: var(--surface-muted);
 }
@@ -191,7 +186,7 @@ main {
   display: grid;
   gap: var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   padding: var(--space-4);
   background: var(--surface-muted);
   color: var(--text-muted);
@@ -206,12 +201,24 @@ main {
 .summary-row {
   display: grid;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-4);
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
 }
 
 .report-row {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
+  border-left: 3px solid var(--border);
+}
+
+.report-row:hover,
+.summary-row:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
+.report-row:hover {
+  border-left-color: var(--accent);
 }
 
 .report-row div:first-child,
@@ -227,6 +234,10 @@ main {
 .drilldown p {
   color: var(--text-muted);
   overflow-wrap: anywhere;
+}
+
+.row-actions button {
+  min-height: 38px;
 }
 
 .drilldown {
