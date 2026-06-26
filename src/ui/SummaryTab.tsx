@@ -106,7 +106,7 @@ export function SummaryTab(props: SummaryTabProps): ReactElement {
                     ) : (
                       row.workReports.map((report) => (
                         <p key={report.id}>
-                          {report.name} · {report.totalWorkers}명 · {report.floor}
+                          {report.workerNames.join(", ")} · {report.totalWorkers}명 · {report.floor}
                         </p>
                       ))
                     )}

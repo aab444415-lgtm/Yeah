@@ -111,7 +111,8 @@ main {
 
 .parent-picker,
 .inline-parent,
-.inline-parent-heading {
+.inline-parent-heading,
+.worker-panel {
   display: grid;
   gap: var(--space-3);
 }

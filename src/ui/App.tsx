@@ -37,7 +37,7 @@ export function App(): ReactElement {
     [data.quantityReports],
   )
   const workerTotal = useMemo(
-    () => data.workReports.reduce((total, report) => total + report.totalWorkers, 0),
+    () => data.workReports.reduce((total, report) => total + report.workerNames.length, 0),
     [data.workReports],
   )
 

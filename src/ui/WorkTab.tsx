@@ -1,4 +1,3 @@
-import { Pencil, Plus, Save, Trash2, X } from "lucide-react"
 import type { ReactElement } from "react"
 import { useMemo, useState } from "react"
 import {
@@ -8,36 +7,52 @@ import {
   type WorkReport,
   createWorkReport,
   deriveWorkReportView,
+  normalizeWorkerNames,
   updateWorkReport,
   validateWorkInput,
 } from "../domain/reports"
 import type { ReportStore } from "../domain/store"
+import {
+  type WorkCopyItemInput,
+  createCopyItemInputFromQuantity,
+  toWorkCopyItemInput,
+} from "../domain/workCopy"
 import { FormField, ReadOnlyField } from "./FormField"
 import { InlineQuantityCreator } from "./InlineQuantityCreator"
+import { WorkCopyItemsEditor } from "./WorkCopyItemsEditor"
+import { WorkFormActions } from "./WorkFormActions"
 import { WorkParentSelector } from "./WorkParentSelector"
+import { WorkParentSummary } from "./WorkParentSummary"
+import { WorkReportList } from "./WorkReportList"
+import { WorkShiftSelect } from "./WorkShiftSelect"
+import { WorkerToggleGroup } from "./WorkerToggleGroup"
+import { EMPTY_WORK_INPUT } from "./workFormDefaults"
+import {
+  clearCopyItemsError,
+  clearQuantityAndCopyErrors,
+  clearWorkerNamesError,
+} from "./workFormErrors"
 
 type WorkTabProps = {
   readonly data: ReportStore
   readonly onChange: (data: ReportStore) => void
 }
 
-const EMPTY_INPUT: WorkInput = {
-  quantityReportId: "",
-  name: "",
-  totalWorkers: "",
-  floor: "",
-}
-
 export function WorkTab(props: WorkTabProps): ReactElement {
-  const [form, setForm] = useState<WorkInput>(EMPTY_INPUT)
+  const [form, setForm] = useState<WorkInput>(EMPTY_WORK_INPUT)
   const [errors, setErrors] = useState<WorkFieldErrors>({})
   const [editingId, setEditingId] = useState<string>("")
   const [filter, setFilter] = useState<string>("")
   const [notice, setNotice] = useState<string>("")
+  const [pendingWorkerName, setPendingWorkerName] = useState<string>("")
   const [showQuantityCreator, setShowQuantityCreator] = useState<boolean>(false)
 
   const selectedQuantity = props.data.quantityReports.find(
     (report) => report.id === form.quantityReportId,
+  )
+  const availableWorkerNames = useMemo(
+    () => normalizeWorkerNames([...props.data.registeredWorkerNames, ...form.workerNames]),
+    [form.workerNames, props.data.registeredWorkerNames],
   )
   const hasQuantityReports = props.data.quantityReports.length > 0
   const shouldShowQuantityCreator = !hasQuantityReports || showQuantityCreator
@@ -55,7 +70,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
     const query = filter.trim().toLowerCase()
     if (query.length === 0) return joinedRows
     return joinedRows.filter((report) =>
-      [report.date, report.line, report.equipmentUnit, report.name, report.floor]
+      [report.date, report.line, report.equipmentUnit, report.workerNames.join(" "), report.floor]
         .join(" ")
         .toLowerCase()
         .includes(query),
@@ -88,16 +103,19 @@ export function WorkTab(props: WorkTabProps): ReactElement {
     setEditingId(report.id)
     setForm({
       quantityReportId: report.quantityReportId,
-      name: report.name,
-      totalWorkers: String(report.totalWorkers),
+      date: report.date,
+      shift: report.shift,
+      workerNames: report.workerNames,
       floor: report.floor,
+      copyItems: toWorkCopyItemInput(report.copyItems),
     })
     setErrors({})
     setNotice("")
   }
 
   function deleteReport(report: WorkReport): void {
-    if (!window.confirm(`${report.name} 작업일보를 삭제할까요?`)) return
+    const workerText = report.workerNames.join(", ")
+    if (!window.confirm(`${workerText} 작업일보를 삭제할까요?`)) return
     props.onChange({
       ...props.data,
       workReports: props.data.workReports.filter((row) => row.id !== report.id),
@@ -110,16 +128,58 @@ export function WorkTab(props: WorkTabProps): ReactElement {
       ...props.data,
       quantityReports: [report, ...props.data.quantityReports],
     })
-    setForm({ ...form, quantityReportId: report.id })
+    setForm({
+      ...form,
+      quantityReportId: report.id,
+      copyItems: [createCopyItemInputFromQuantity(report)],
+    })
     setShowQuantityCreator(false)
     setErrors({})
     setNotice("물량일보를 만들고 작업일보에 연결했습니다.")
   }
 
+  function registerWorker(): void {
+    const names = normalizeWorkerNames([pendingWorkerName])
+    for (const name of names) {
+      props.onChange({
+        ...props.data,
+        registeredWorkerNames: normalizeWorkerNames([...props.data.registeredWorkerNames, name]),
+      })
+      setForm({ ...form, workerNames: normalizeWorkerNames([...form.workerNames, name]) })
+      setPendingWorkerName("")
+      setErrors(clearWorkerNamesError(errors))
+      return
+    }
+  }
+
+  function toggleWorker(name: string): void {
+    const workerNames = form.workerNames.includes(name)
+      ? form.workerNames.filter((workerName) => workerName !== name)
+      : [...form.workerNames, name]
+    setForm({ ...form, workerNames: normalizeWorkerNames(workerNames) })
+    setErrors(clearWorkerNamesError(errors))
+  }
+
+  function selectQuantity(quantityReportId: string): void {
+    const quantity = props.data.quantityReports.find((report) => report.id === quantityReportId)
+    setForm({
+      ...form,
+      quantityReportId,
+      copyItems: [createCopyItemInputFromQuantity(quantity)],
+    })
+    setErrors(clearQuantityAndCopyErrors(errors))
+  }
+
+  function updateCopyItems(copyItems: readonly WorkCopyItemInput[]): void {
+    setForm({ ...form, copyItems })
+    setErrors(clearCopyItemsError(errors))
+  }
+
   function resetForm(): void {
-    setForm(EMPTY_INPUT)
+    setForm(EMPTY_WORK_INPUT)
     setErrors({})
     setEditingId("")
+    setPendingWorkerName("")
   }
 
   return (
@@ -138,7 +198,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
         <WorkParentSelector
           error={errors.quantityReportId}
           expanded={showQuantityCreator}
-          onSelect={(quantityReportId) => setForm({ ...form, quantityReportId })}
+          onSelect={selectQuantity}
           onToggleCreator={() => setShowQuantityCreator(!showQuantityCreator)}
           quantityReports={props.data.quantityReports}
           selectedId={form.quantityReportId}
@@ -150,30 +210,18 @@ export function WorkTab(props: WorkTabProps): ReactElement {
           />
         ) : null}
 
-        <div className="readonly-grid" aria-label="상위 물량일보에서 가져온 값">
-          <ReadOnlyField label="날짜" value={selectedQuantity?.date ?? "-"} />
-          <ReadOnlyField label="라인" value={selectedQuantity?.line ?? "-"} />
-          <ReadOnlyField label="장비호기" value={selectedQuantity?.equipmentUnit ?? "-"} />
-        </div>
+        <WorkParentSummary quantity={selectedQuantity} />
 
         <div className="form-grid">
           <FormField
-            error={errors.name}
-            label="이름"
-            name="work-name"
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            value={form.name}
+            error={errors.date}
+            label="작업 날짜"
+            name="work-date"
+            onChange={(event) => setForm({ ...form, date: event.target.value })}
+            type="date"
+            value={form.date}
           />
-          <FormField
-            error={errors.totalWorkers}
-            label="총원"
-            min="1"
-            name="work-total-workers"
-            onChange={(event) => setForm({ ...form, totalWorkers: event.target.value })}
-            step="1"
-            type="number"
-            value={form.totalWorkers}
-          />
+          <WorkShiftSelect onChange={(shift) => setForm({ ...form, shift })} value={form.shift} />
           <FormField
             error={errors.floor}
             label="층수"
@@ -183,62 +231,36 @@ export function WorkTab(props: WorkTabProps): ReactElement {
           />
         </div>
 
-        <div className="command-row">
-          <button className="primary" type="submit">
-            {editingId.length > 0 ? <Save size={16} /> : <Plus size={16} />}
-            {editingId.length > 0 ? "수정 저장" : "저장"}
-          </button>
-          {editingId.length > 0 ? (
-            <button onClick={resetForm} type="button">
-              <X size={16} /> 취소
-            </button>
-          ) : null}
+        <WorkerToggleGroup
+          error={errors.workerNames}
+          onPendingWorkerNameChange={setPendingWorkerName}
+          onRegisterWorker={registerWorker}
+          onToggleWorker={toggleWorker}
+          pendingWorkerName={pendingWorkerName}
+          registeredWorkerNames={availableWorkerNames}
+          selectedWorkerNames={form.workerNames}
+        />
+
+        <div className="readonly-grid" aria-label="작업일보 총원">
+          <ReadOnlyField label="총원" value={`${form.workerNames.length}명`} />
         </div>
-        <p aria-live="polite" className="notice">
-          {notice}
-        </p>
+
+        <WorkCopyItemsEditor
+          error={errors.copyItems}
+          items={form.copyItems}
+          onChange={updateCopyItems}
+        />
+
+        <WorkFormActions editing={editingId.length > 0} notice={notice} onCancel={resetForm} />
       </form>
 
-      <section className="panel list-panel" aria-label="작업일보 목록">
-        <div className="section-heading">
-          <p className="eyebrow">연결된 작업일보</p>
-          <h2>작업일보 목록</h2>
-        </div>
-        <label className="field filter-field" htmlFor="work-filter">
-          <span>검색</span>
-          <input
-            id="work-filter"
-            onChange={(event) => setFilter(event.target.value)}
-            value={filter}
-          />
-        </label>
-        {rows.length === 0 ? (
-          <p className="empty-state">저장된 작업일보가 없습니다.</p>
-        ) : (
-          <div className="report-list">
-            {rows.map((report) => (
-              <article className="report-row" key={report.id}>
-                <div>
-                  <strong>
-                    {report.name} · {report.totalWorkers}명 · {report.floor}
-                  </strong>
-                  <span>
-                    {report.date} · {report.line} · {report.equipmentUnit}
-                  </span>
-                </div>
-                <div className="row-actions">
-                  <button onClick={() => startEdit(report)} type="button">
-                    <Pencil size={15} /> 수정
-                  </button>
-                  <button className="danger" onClick={() => deleteReport(report)} type="button">
-                    <Trash2 size={15} /> 삭제
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <WorkReportList
+        filter={filter}
+        onDelete={deleteReport}
+        onEdit={startEdit}
+        onFilterChange={setFilter}
+        rows={rows}
+      />
     </section>
   )
 }

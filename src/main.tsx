@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client"
 import { App } from "./ui/App"
 import "./index.css"
 import "./ui.css"
+import "./work-copy.css"
+import "./workers.css"
 
 const root = document.getElementById("root")
 

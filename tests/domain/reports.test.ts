@@ -33,20 +33,23 @@ describe("linked report domain", () => {
   it("Given invalid work fields When validating Then parent link and worker errors are returned", () => {
     const result = validateWorkInput({
       quantityReportId: "",
-      name: "",
-      totalWorkers: "0",
+      date: "",
+      shift: "주간",
+      workerNames: [],
       floor: "",
+      copyItems: [],
     })
 
     expect(result).toEqual({
       quantityReportId: "연결할 물량일보를 선택하세요.",
-      name: "이름을 입력하세요.",
-      totalWorkers: "총원은 1명 이상의 정수여야 합니다.",
+      date: "작업 날짜를 입력하세요.",
+      workerNames: "출근자를 한 명 이상 선택하세요.",
       floor: "층수를 입력하세요.",
+      copyItems: "복사용 VMB 항목을 한 개 이상 입력하세요.",
     })
   })
 
-  it("Given a parent quantity report When deriving a work view Then date line and equipment are inherited", () => {
+  it("Given a parent quantity report When deriving a work view Then work date is direct and total follows selected workers", () => {
     const quantity = createQuantityReport({
       id: "qty-1",
       now: "2026-06-25T00:00:00.000Z",
@@ -65,21 +68,31 @@ describe("linked report domain", () => {
       now: "2026-06-25T01:00:00.000Z",
       input: {
         quantityReportId: quantity.id,
-        name: "김민수",
-        totalWorkers: "8",
+        date: "2026-06-26",
+        shift: "연장",
+        workerNames: ["김민수", "이서연"],
         floor: "3층",
+        copyItems: [
+          { vmbCode: "VMB-A12", cableMeter: "12.5", jacketMeter: "3" },
+          { vmbCode: "VMB-B22", cableMeter: "5", jacketMeter: "1" },
+        ],
       },
     })
 
     expect(deriveWorkReportView(work, quantity)).toMatchObject({
       id: "work-1",
       quantityReportId: "qty-1",
-      date: "2026-06-25",
+      date: "2026-06-26",
+      shift: "연장",
       line: "A",
       equipmentUnit: "2호기",
-      name: "김민수",
-      totalWorkers: 8,
+      workerNames: ["김민수", "이서연"],
+      totalWorkers: 2,
       floor: "3층",
+      copyItems: [
+        { vmbCode: "VMB-A12", cableMeter: 12.5, jacketMeter: 3 },
+        { vmbCode: "VMB-B22", cableMeter: 5, jacketMeter: 1 },
+      ],
     })
   })
 })

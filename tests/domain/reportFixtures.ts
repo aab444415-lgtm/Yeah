@@ -21,9 +21,11 @@ const defaultQuantityInput: QuantityInput = {
 }
 
 const defaultWorkInput: Omit<WorkInput, "quantityReportId"> = {
-  name: "김민수",
-  totalWorkers: "8",
+  date: "2026-06-25",
+  shift: "주간",
+  workerNames: ["김민수", "이서연"],
   floor: "3층",
+  copyItems: [{ vmbCode: "VMB-A12", cableMeter: "12.5", jacketMeter: "3" }],
 }
 
 type QuantityFixtureArgs = {
@@ -65,9 +67,11 @@ export function makeWorkReport(args: WorkFixtureArgs): WorkReport {
 }
 
 export function makeStore(args: StoreFixtureArgs = {}): ReportStore {
+  const workReports = [...(args.workReports ?? [])]
   return {
     version: 1,
+    registeredWorkerNames: Array.from(new Set(workReports.flatMap((report) => report.workerNames))),
     quantityReports: [...(args.quantityReports ?? [])],
-    workReports: [...(args.workReports ?? [])],
+    workReports,
   }
 }

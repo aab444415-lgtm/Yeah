@@ -1,4 +1,12 @@
 import { z } from "zod"
+import {
+  type WorkCopyItemInput,
+  WorkCopyItemSchema,
+  type WorkShift,
+  WorkShiftSchema,
+  getWorkCopyItemsError,
+  normalizeWorkCopyItems,
+} from "./workCopy"
 
 export const QuantityReportIdSchema = z.string().min(1).brand("QuantityReportId")
 export const WorkReportIdSchema = z.string().min(1).brand("WorkReportId")
@@ -18,9 +26,11 @@ export type QuantityInput = {
 
 export type WorkInput = {
   readonly quantityReportId: string
-  readonly name: string
-  readonly totalWorkers: string
+  readonly date: string
+  readonly shift: WorkShift
+  readonly workerNames: readonly string[]
   readonly floor: string
+  readonly copyItems: readonly WorkCopyItemInput[]
 }
 
 export const QuantityReportSchema = z.object({
@@ -39,9 +49,11 @@ export const QuantityReportSchema = z.object({
 export const WorkReportSchema = z.object({
   id: WorkReportIdSchema,
   quantityReportId: QuantityReportIdSchema,
-  name: z.string().min(1),
-  totalWorkers: z.number().int().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  shift: WorkShiftSchema,
+  workerNames: z.array(z.string().min(1)).min(1),
   floor: z.string().min(1),
+  copyItems: z.array(WorkCopyItemSchema).min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
@@ -53,9 +65,9 @@ export type QuantityFieldErrors = Partial<Record<keyof QuantityInput, string>>
 export type WorkFieldErrors = Partial<Record<keyof WorkInput, string>>
 
 export type WorkReportView = WorkReport & {
-  readonly date: string
   readonly line: string
   readonly equipmentUnit: string
+  readonly totalWorkers: number
 }
 
 type CreateQuantityArgs = {
@@ -97,11 +109,13 @@ export function validateWorkInput(input: WorkInput): WorkFieldErrors {
   if (input.quantityReportId.trim().length === 0) {
     errors.quantityReportId = "연결할 물량일보를 선택하세요."
   }
-  if (input.name.trim().length === 0) errors.name = "이름을 입력하세요."
-  if (!isPositiveInteger(input.totalWorkers)) {
-    errors.totalWorkers = "총원은 1명 이상의 정수여야 합니다."
+  if (input.date.trim().length === 0) errors.date = "작업 날짜를 입력하세요."
+  if (normalizeWorkerNames(input.workerNames).length === 0) {
+    errors.workerNames = "출근자를 한 명 이상 선택하세요."
   }
   if (input.floor.trim().length === 0) errors.floor = "층수를 입력하세요."
+  const copyItemsError = getWorkCopyItemsError(input.copyItems)
+  if (copyItemsError !== undefined) errors.copyItems = copyItemsError
   return errors
 }
 
@@ -139,9 +153,11 @@ export function createWorkReport(args: CreateWorkArgs): WorkReport {
   return WorkReportSchema.parse({
     id: args.id,
     quantityReportId: args.input.quantityReportId,
-    name: args.input.name.trim(),
-    totalWorkers: Number(args.input.totalWorkers),
+    date: args.input.date.trim(),
+    shift: args.input.shift,
+    workerNames: normalizeWorkerNames(args.input.workerNames),
     floor: args.input.floor.trim(),
+    copyItems: normalizeWorkCopyItems(args.input.copyItems),
     createdAt: args.now,
     updatedAt: args.now,
   })
@@ -158,10 +174,14 @@ export function deriveWorkReportView(
 ): WorkReportView {
   return {
     ...workReport,
-    date: quantityReport.date,
     line: quantityReport.line,
     equipmentUnit: quantityReport.equipmentUnit,
+    totalWorkers: workReport.workerNames.length,
   }
+}
+
+export function normalizeWorkerNames(names: readonly string[]): string[] {
+  return Array.from(new Set(names.map((name) => name.trim()).filter((name) => name.length > 0)))
 }
 
 function hasErrors(errors: QuantityFieldErrors | WorkFieldErrors): boolean {
@@ -171,9 +191,4 @@ function hasErrors(errors: QuantityFieldErrors | WorkFieldErrors): boolean {
 function isPositiveNumber(value: string): boolean {
   const parsed = Number(value)
   return value.trim().length > 0 && Number.isFinite(parsed) && parsed > 0
-}
-
-function isPositiveInteger(value: string): boolean {
-  const parsed = Number(value)
-  return value.trim().length > 0 && Number.isInteger(parsed) && parsed >= 1
 }

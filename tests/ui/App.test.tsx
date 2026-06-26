@@ -30,19 +30,35 @@ describe("report app UI", () => {
       screen.getByLabelText("연결 물량일보"),
       screen.getByRole("option", { name: /RMD-001/u }),
     )
-    await user.type(screen.getByLabelText("이름"), "김민수")
-    await user.type(screen.getByLabelText("총원"), "8")
+    expect(screen.getByLabelText("1번 VMB코드")).toHaveDisplayValue("VMB-A12")
+    expect(screen.getByLabelText("1번 케이블미터")).toHaveDisplayValue("12.5")
+    await user.type(screen.getByLabelText("작업 날짜"), "2026-06-26")
+    await user.selectOptions(screen.getByLabelText("구분"), "연장")
+    await registerWorker(user, "김민수")
+    await registerWorker(user, "이서연")
+    await user.click(screen.getByRole("button", { name: "이서연" }))
+    expect(screen.getByLabelText("작업일보 총원")).toHaveTextContent("1명")
     await user.type(screen.getByLabelText("층수"), "3층")
+    await user.type(screen.getByLabelText("1번 자켓미터"), "3")
+    await user.click(screen.getByRole("button", { name: "VMB 항목 추가" }))
+    await user.type(screen.getByLabelText("2번 VMB코드"), "VMB-B22")
+    await user.type(screen.getByLabelText("2번 케이블미터"), "5")
+    await user.type(screen.getByLabelText("2번 자켓미터"), "1")
     await user.click(screen.getByRole("button", { name: "저장" }))
 
     const workList = screen.getByLabelText("작업일보 목록")
-    expect(within(workList).getByText("김민수 · 8명 · 3층")).toBeInTheDocument()
-    expect(within(workList).getByText("2026-06-25 · A · 2호기")).toBeInTheDocument()
+    expect(within(workList).getByText("김민수 · 1명 · 3층")).toBeInTheDocument()
+    expect(within(workList).getByText("2026-06-26 · A · 2호기")).toBeInTheDocument()
+    expect(within(workList).getByLabelText("작업일보 복사용 내용").textContent).toBe(
+      ["2026-06-26 연장", "김민수 1명", "", "A3층", "1. VMB-A12 12.5 3", "2. VMB-B22 5 1"].join(
+        "\n",
+      ),
+    )
 
     await user.click(screen.getByRole("tab", { name: "통합현황" }))
     expect(screen.getByText("12.5")).toBeInTheDocument()
     expect(screen.getAllByText("1건", { selector: "strong" })).toHaveLength(2)
-    expect(screen.getByText("8명", { selector: "strong" })).toBeInTheDocument()
+    expect(screen.getByText("1명", { selector: "strong" })).toBeInTheDocument()
   })
 
   it("Given 작업일보 flow without a parent When creating 물량일보 inline Then it is selected for the child", async () => {
@@ -64,10 +80,13 @@ describe("report app UI", () => {
       "2026-06-25 / A / 2호기 / RMD-001",
     )
     expect(screen.getByLabelText("상위 물량일보에서 가져온 값")).toHaveTextContent("2026-06-25")
+    expect(screen.getByLabelText("1번 VMB코드")).toHaveDisplayValue("VMB-A12")
+    expect(screen.getByLabelText("1번 케이블미터")).toHaveDisplayValue("12.5")
 
-    await user.type(screen.getByLabelText("이름"), "김민수")
-    await user.type(screen.getByLabelText("총원"), "8")
+    await user.type(screen.getByLabelText("작업 날짜"), "2026-06-25")
+    await registerWorker(user, "김민수")
     await user.type(screen.getByLabelText("층수"), "3층")
+    await user.type(screen.getByLabelText("1번 자켓미터"), "0")
     await user.click(screen.getByRole("button", { name: "저장" }))
 
     expect(screen.getByText("작업 1건")).toBeInTheDocument()
@@ -86,11 +105,11 @@ describe("report app UI", () => {
     expect(screen.getByText("물량 1건")).toBeInTheDocument()
     expect(screen.getByText("작업 1건")).toBeInTheDocument()
     await user.click(screen.getByRole("tab", { name: "작업일보" }))
-    expect(screen.getByText("김민수 · 8명 · 3층")).toBeInTheDocument()
+    expect(screen.getByText("김민수 · 1명 · 3층")).toBeInTheDocument()
     expect(screen.getByText("2026-06-25 · A · 2호기")).toBeInTheDocument()
   })
 
-  it("Given linked child When parent date line and equipment are edited Then work and summary show updated parent fields", async () => {
+  it("Given linked child When parent date line and equipment are edited Then work keeps its date and updates parent fields", async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -107,10 +126,10 @@ describe("report app UI", () => {
     await user.click(screen.getByRole("button", { name: "수정 저장" }))
 
     await user.click(screen.getByRole("tab", { name: "작업일보" }))
-    expect(screen.getByText("2026-06-26 · B · 3호기")).toBeInTheDocument()
+    expect(screen.getByText("2026-06-25 · B · 3호기")).toBeInTheDocument()
 
     await user.click(screen.getByRole("tab", { name: "통합현황" }))
-    expect(screen.getByText("2026-06-26 · B · 3호기")).toBeInTheDocument()
+    expect(screen.getByText("2026-06-25 · B · 3호기")).toBeInTheDocument()
     expect(screen.getByText(/미터 12.5 \/ 물량 1건 \/ 작업/u)).toBeInTheDocument()
   })
 
@@ -145,9 +164,18 @@ async function createWork(user: ReturnType<typeof userEvent.setup>): Promise<voi
     screen.getByLabelText("연결 물량일보"),
     screen.getByRole("option", { name: /RMD-001/u }),
   )
-  await user.type(screen.getByLabelText("이름"), "김민수")
-  await user.type(screen.getByLabelText("총원"), "8")
+  await user.type(screen.getByLabelText("작업 날짜"), "2026-06-25")
+  await registerWorker(user, "김민수")
   await user.type(screen.getByLabelText("층수"), "3층")
+  await user.type(screen.getByLabelText("1번 자켓미터"), "3")
   await user.click(screen.getByRole("button", { name: "저장" }))
   await user.click(screen.getByRole("tab", { name: "물량일보" }))
+}
+
+async function registerWorker(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+): Promise<void> {
+  await user.type(screen.getByLabelText("이름 등록"), name)
+  await user.click(screen.getByRole("button", { name: "이름 추가" }))
 }

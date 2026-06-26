@@ -1,0 +1,76 @@
+.work-copy-editor {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.compact-heading {
+  margin-bottom: 0;
+}
+
+.work-copy-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.work-copy-row {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) minmax(110px, 0.8fr) minmax(110px, 0.8fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-3);
+  background: var(--surface-panel);
+}
+
+.work-copy-index {
+  display: inline-grid;
+  width: 32px;
+  height: 40px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-button {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+.report-row-with-copy {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.report-row-with-copy .copy-output {
+  grid-column: 1 / -1;
+}
+
+.copy-output {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .work-copy-row,
+  .report-row-with-copy {
+    grid-template-columns: 1fr;
+  }
+
+  .work-copy-index {
+    width: 100%;
+  }
+}

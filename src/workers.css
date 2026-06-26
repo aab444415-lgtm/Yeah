@@ -1,0 +1,33 @@
+.worker-panel {
+  margin-top: var(--space-4);
+}
+
+.worker-register {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.worker-toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.worker-toggle {
+  min-width: 84px;
+}
+
+.worker-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--surface-panel);
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .worker-register {
+    grid-template-columns: 1fr;
+  }
+}

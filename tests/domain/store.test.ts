@@ -39,7 +39,7 @@ describe("report store selectors and import/export", () => {
     const duplicateWork = makeWorkReport({
       id: "work-duplicate",
       quantityReportId: quantity.id,
-      input: { name: "이서연", totalWorkers: "3", floor: "4층" },
+      input: { date: "2026-06-25", workerNames: ["이서연"], floor: "4층" },
     })
     const source = JSON.stringify(
       makeStore({ quantityReports: [quantity], workReports: [work, duplicateWork] }),
@@ -92,8 +92,10 @@ describe("report store selectors and import/export", () => {
     const data = makeStore({ quantityReports: [quantity], workReports: [work] })
 
     expect(exportQuantityCsv(data)).toContain("날짜,라인,장비호기,RMD번호,VMB코드,미터 수,위치")
-    expect(exportWorkCsv(data)).toContain("날짜,라인,장비호기,이름,총원,층수")
-    expect(exportWorkCsv(data)).toContain("2026-06-25,A,2호기,김민수,8,3층")
+    expect(exportWorkCsv(data)).toContain("날짜,구분,라인,장비호기,출근자,총원,층수,복사용 항목")
+    expect(exportWorkCsv(data)).toContain(
+      "2026-06-25,주간,A,2호기,김민수 / 이서연,2,3층,1. VMB-A12 12.5 3",
+    )
     expect(summarizeReports(data)).toEqual([
       {
         date: "2026-06-25",
@@ -102,18 +104,20 @@ describe("report store selectors and import/export", () => {
         meterCount: 12.5,
         quantityCount: 1,
         workCount: 1,
-        totalWorkers: 8,
+        totalWorkers: 2,
         quantityReports: [quantity],
         workReports: [
           {
             id: "work-1",
             quantityReportId: "qty-1",
             date: "2026-06-25",
+            shift: "주간",
             line: "A",
             equipmentUnit: "2호기",
-            name: "김민수",
-            totalWorkers: 8,
+            workerNames: ["김민수", "이서연"],
+            totalWorkers: 2,
             floor: "3층",
+            copyItems: [{ vmbCode: "VMB-A12", cableMeter: 12.5, jacketMeter: 3 }],
             createdAt: testNow,
             updatedAt: testNow,
           },
@@ -122,7 +126,7 @@ describe("report store selectors and import/export", () => {
     ])
   })
 
-  it("Given linked child When parent line equipment and date are edited Then display data sources use updated parent fields", () => {
+  it("Given linked child When parent line and equipment are edited Then display data uses updated parent fields and direct work date", () => {
     const quantity = makeQuantityReport({ id: "qty-parent-edit" })
     const work = makeWorkReport({ id: "work-linked", quantityReportId: quantity.id })
     const editedQuantity = updateQuantityReport(
@@ -132,9 +136,55 @@ describe("report store selectors and import/export", () => {
     )
     const data = makeStore({ quantityReports: [editedQuantity], workReports: [work] })
 
-    expect(exportWorkCsv(data)).toContain("2026-06-26,B,3호기,김민수,8,3층")
+    expect(exportWorkCsv(data)).toContain(
+      "2026-06-25,주간,B,3호기,김민수 / 이서연,2,3층,1. VMB-A12 12.5 3",
+    )
+    expect(summarizeReports(data)).toEqual([
+      {
+        date: "2026-06-25",
+        line: "B",
+        equipmentUnit: "3호기",
+        meterCount: 0,
+        quantityCount: 0,
+        workCount: 1,
+        totalWorkers: 2,
+        quantityReports: [],
+        workReports: [
+          {
+            ...work,
+            date: "2026-06-25",
+            line: "B",
+            equipmentUnit: "3호기",
+            totalWorkers: 2,
+          },
+        ],
+      },
+      {
+        date: "2026-06-26",
+        line: "B",
+        equipmentUnit: "3호기",
+        meterCount: 12.5,
+        quantityCount: 1,
+        workCount: 0,
+        totalWorkers: 0,
+        quantityReports: [editedQuantity],
+        workReports: [],
+      },
+    ])
+  })
+
+  it("Given work date differs from quantity date When joining Then work keeps its direct date", () => {
+    const quantity = makeQuantityReport({ input: { date: "2026-06-25" } })
+    const work = makeWorkReport({
+      quantityReportId: quantity.id,
+      input: { date: "2026-06-27", workerNames: ["박지훈"] },
+    })
+    const data = makeStore({ quantityReports: [quantity], workReports: [work] })
+
+    expect(exportWorkCsv(data)).toContain("2026-06-27,주간,A,2호기,박지훈,1,3층,1. VMB-A12 12.5 3")
     expect(summarizeReports(data)).toMatchObject([
-      { date: "2026-06-26", line: "B", equipmentUnit: "3호기", workCount: 1, totalWorkers: 8 },
+      { date: "2026-06-25", quantityCount: 1, workCount: 0 },
+      { date: "2026-06-27", quantityCount: 0, workCount: 1, totalWorkers: 1 },
     ])
   })
 
@@ -208,7 +258,7 @@ describe("report store selectors and import/export", () => {
     const duplicateWork = makeWorkReport({
       id: "work-duplicate",
       quantityReportId: quantity.id,
-      input: { name: "이서연", totalWorkers: "3", floor: "4층" },
+      input: { date: "2026-06-25", workerNames: ["이서연"], floor: "4층" },
     })
     const current: ReportStore = makeStore()
     const source = JSON.stringify(

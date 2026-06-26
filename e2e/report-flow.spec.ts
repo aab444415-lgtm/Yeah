@@ -27,7 +27,9 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await page.getByRole("tab", { name: "작업일보" }).click()
   await page.getByRole("button", { name: "저장" }).click()
   await expect(page.getByText("연결할 물량일보를 선택하세요.")).toBeVisible()
-  await expect(page.getByText("총원은 1명 이상의 정수여야 합니다.")).toBeVisible()
+  await expect(page.getByText("작업 날짜를 입력하세요.")).toBeVisible()
+  await expect(page.getByText("출근자를 한 명 이상 선택하세요.")).toBeVisible()
+  await expect(page.getByText("VMB코드를 입력하세요.")).toBeVisible()
   log.push("PASS work invalid: child save without parent and workers was blocked")
 
   await createInlineQuantity(page)
@@ -36,34 +38,42 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await expect(inherited.getByText("2026-06-25")).toBeVisible()
   await expect(inherited.getByText("A")).toBeVisible()
   await expect(inherited.getByText("2호기")).toBeVisible()
+  await expect(page.getByLabel("1번 VMB코드")).toHaveValue("VMB-A12")
+  await expect(page.getByLabel("1번 케이블미터")).toHaveValue("12.5")
   log.push("PASS inline parent: 작업일보 flow created and selected parent 물량일보")
 
   await createWork(page)
-  await expect(page.getByText("김민수 · 8명 · 3층")).toBeVisible()
+  await expect(page.getByText("김민수 · 1명 · 3층")).toBeVisible()
   await expect(page.getByText("2026-06-25 · A · 2호기")).toBeVisible()
-  log.push("PASS work happy: child 작업일보 linked to parent and inherited parent fields")
+  await expect(page.getByLabel("작업일보 복사용 내용")).toHaveText(
+    ["2026-06-25 연장", "김민수 1명", "", "A3층", "1. VMB-A12 12.5 3", "2. VMB-B22 5 1"].join("\n"),
+  )
+  log.push("PASS work happy: child 작업일보 saved with paste-ready copy output")
 
   await page.reload()
   await expect(page.getByLabel("현재 저장 현황").getByText("물량 1건")).toBeVisible()
   await expect(page.getByLabel("현재 저장 현황").getByText("작업 1건")).toBeVisible()
   await page.getByRole("tab", { name: "작업일보" }).click()
-  await expect(page.getByText("김민수 · 8명 · 3층")).toBeVisible()
+  await expect(page.getByText("김민수 · 1명 · 3층")).toBeVisible()
   await expect(page.getByText("2026-06-25 · A · 2호기")).toBeVisible()
   log.push("PASS reload persistence: linked parent and child restored from localStorage")
 
   await editParent(page)
   await page.getByRole("tab", { name: "작업일보" }).click()
-  await expect(page.getByText("2026-06-26 · B · 3호기")).toBeVisible()
-  log.push("PASS parent edit display: 작업일보 list reflected edited parent fields")
+  await expect(page.getByText("2026-06-25 · B · 3호기")).toBeVisible()
+  log.push("PASS parent edit display: 작업일보 kept direct date and reflected edited parent fields")
 
   await page.getByRole("tab", { name: "통합현황" }).click()
-  await expect(page.getByText("2026-06-26 · B · 3호기")).toBeVisible()
+  await expect(page.getByText("2026-06-25 · B · 3호기")).toBeVisible()
   await expect(page.getByText(/미터 12.5 \/ 물량 1건 \/ 작업/u)).toBeVisible()
-  log.push("PASS parent edit summary: 통합현황 regrouped under edited date line equipment")
+  log.push("PASS parent edit summary: 통합현황 shows direct work date separately")
 
   await saveDownload(page, "작업일보 CSV", `${evidenceDir}/work-report-updated.csv`)
-  await expectCsv(`${evidenceDir}/work-report-updated.csv`, "2026-06-26,B,3호기,김민수,8,3층")
-  log.push("PASS parent edit CSV: 작업일보 CSV used edited parent fields")
+  await expectCsv(
+    `${evidenceDir}/work-report-updated.csv`,
+    ['2026-06-25,연장,B,3호기,김민수,1,3층,"1. VMB-A12 12.5 3', '2. VMB-B22 5 1"'].join("\n"),
+  )
+  log.push("PASS parent edit CSV: 작업일보 CSV used direct date and selected worker total")
 
   await saveDownload(page, "JSON 백업", `${evidenceDir}/round-trip-backup.json`)
   const backupBuffer = await readFile(`${evidenceDir}/round-trip-backup.json`)
@@ -79,13 +89,17 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await expect(page.getByLabel("현재 저장 현황").getByText("작업 1건")).toBeVisible()
   log.push("PASS JSON round trip: downloaded backup imported after storage clear")
 
+  await page.getByRole("tab", { name: "작업일보" }).click()
   await page.setViewportSize({ width: 375, height: 900 })
-  await page.screenshot({ path: `${evidenceDir}/final-375.png`, fullPage: true })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: `${evidenceDir}/work-copy-375.png`, fullPage: true })
   await page.setViewportSize({ width: 768, height: 900 })
-  await page.screenshot({ path: `${evidenceDir}/final-768.png`, fullPage: true })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: `${evidenceDir}/work-copy-768.png`, fullPage: true })
   await page.setViewportSize({ width: 1280, height: 900 })
-  await page.screenshot({ path: `${evidenceDir}/final-1280.png`, fullPage: true })
-  log.push("PASS responsive: screenshots captured at 375, 768, 1280 widths")
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: `${evidenceDir}/work-copy-1280.png`, fullPage: true })
+  log.push("PASS responsive: 작업일보 screenshots captured without horizontal overflow")
 
   await writeFile(`${evidenceDir}/browser-flow.txt`, `${log.join("\n")}\n`, "utf8")
 })
@@ -101,8 +115,8 @@ async function seedCorruptStorage(page: Page): Promise<void> {
           {
             id: "work-orphan",
             quantityReportId: "missing-quantity",
-            name: "김민수",
-            totalWorkers: 8,
+            date: "2026-06-25",
+            workerNames: ["김민수"],
             floor: "3층",
             createdAt: "2026-06-25T00:00:00.000Z",
             updatedAt: "2026-06-25T00:00:00.000Z",
@@ -125,9 +139,16 @@ async function createInlineQuantity(page: Page): Promise<void> {
 }
 
 async function createWork(page: Page): Promise<void> {
-  await page.getByLabel("이름").fill("김민수")
-  await page.getByLabel("총원").fill("8")
+  await page.getByLabel("작업 날짜").fill("2026-06-25")
+  await page.getByLabel("구분").selectOption("연장")
+  await page.getByLabel("이름 등록").fill("김민수")
+  await page.getByRole("button", { name: "이름 추가" }).click()
   await page.getByLabel("층수").fill("3층")
+  await page.getByLabel("1번 자켓미터").fill("3")
+  await page.getByRole("button", { name: "VMB 항목 추가" }).click()
+  await page.getByLabel("2번 VMB코드").fill("VMB-B22")
+  await page.getByLabel("2번 케이블미터").fill("5")
+  await page.getByLabel("2번 자켓미터").fill("1")
   await page.getByRole("button", { name: "저장" }).click()
 }
 
@@ -150,4 +171,14 @@ async function saveDownload(page: Page, buttonName: string, path: string): Promi
 async function expectCsv(path: string, expected: string): Promise<void> {
   const text = await readFile(path, "utf8")
   expect(text).toContain(expected)
+}
+
+async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
+    )
+    .toBe(true)
 }
