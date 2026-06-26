@@ -26,24 +26,20 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
 
   await page.getByRole("tab", { name: "작업일보" }).click()
   await page.getByRole("button", { name: "저장" }).click()
-  await expect(page.getByText("연결할 물량일보를 선택하세요.")).toBeVisible()
   await expect(page.getByText("작업 날짜를 입력하세요.")).toBeVisible()
   await expect(page.getByText("출근자를 한 명 이상 선택하세요.")).toBeVisible()
-  await expect(page.getByText("작업 위치/제목을 입력하세요.")).toBeVisible()
+  await expect(page.getByText("작업 묶음마다 물량일보를 선택하세요.")).toBeVisible()
   log.push("PASS work invalid: child save without parent and workers was blocked")
 
-  await createInlineQuantity(page)
-  await expect(page.getByLabel("연결 물량일보")).toHaveValue(/qty-/u)
-  const inherited = page.getByLabel("상위 물량일보에서 가져온 값")
-  await expect(inherited.getByText("2026-06-25")).toBeVisible()
-  await expect(inherited.getByText("A")).toBeVisible()
-  await expect(inherited.getByText("2호기")).toBeVisible()
-  await expect(page.getByLabel("1번 작업 위치/제목")).toHaveValue("A")
+  await createQuantity(page)
+  await page.getByRole("tab", { name: "작업일보" }).click()
+  await selectBlockQuantity(page, 1)
+  await expect(page.getByLabel("1번 작업 위치/제목")).toHaveValue("A 동측")
   await expect(page.getByLabel("1번 작업 내용")).toHaveValue("VMB-A12\n케이블 자켓 12.5m")
-  log.push("PASS inline parent: 작업일보 flow created and selected parent 물량일보")
+  log.push("PASS block parent: 작업 묶음에서 물량일보를 선택하고 기본값을 불러옴")
 
   await createWork(page)
-  await expect(page.getByText("김민수 · 1명 · 3층")).toBeVisible()
+  await expect(page.getByText("김민수 · 1명 · 작업 2건")).toBeVisible()
   await expect(page.getByText("2026-06-25 · A · 2호기")).toBeVisible()
   await expect(page.getByLabel("작업일보 복사용 내용")).toHaveText(
     [
@@ -66,7 +62,7 @@ test("gate fix linked report flow with persistence exports and corrupt storage r
   await expect(page.getByLabel("현재 저장 현황").getByText("물량 1건")).toBeVisible()
   await expect(page.getByLabel("현재 저장 현황").getByText("작업 1건")).toBeVisible()
   await page.getByRole("tab", { name: "작업일보" }).click()
-  await expect(page.getByText("김민수 · 1명 · 3층")).toBeVisible()
+  await expect(page.getByText("김민수 · 1명 · 작업 2건")).toBeVisible()
   await expect(page.getByText("2026-06-25 · A · 2호기")).toBeVisible()
   log.push("PASS reload persistence: linked parent and child restored from localStorage")
 
@@ -139,15 +135,16 @@ async function seedCorruptStorage(page: Page): Promise<void> {
   }, storageKey)
 }
 
-async function createInlineQuantity(page: Page): Promise<void> {
-  await page.getByLabel("같이 만들 날짜").fill("2026-06-25")
-  await page.getByLabel("같이 만들 라인").fill("A")
-  await page.getByLabel("같이 만들 장비호기").fill("2호기")
-  await page.getByLabel("같이 만들 RMD번호").fill("RMD-001")
-  await page.getByLabel("같이 만들 VMB코드").fill("VMB-A12")
-  await page.getByLabel("같이 만들 미터 수").fill("12.5")
-  await page.getByLabel("같이 만들 위치").fill("동측")
-  await page.getByRole("button", { name: "물량일보 같이 만들기" }).click()
+async function createQuantity(page: Page): Promise<void> {
+  await page.getByRole("tab", { name: "물량일보" }).click()
+  await page.getByLabel("날짜").fill("2026-06-25")
+  await page.getByLabel("라인").fill("A")
+  await page.getByLabel("장비호기").fill("2호기")
+  await page.getByLabel("RMD번호").fill("RMD-001")
+  await page.getByLabel("VMB코드").fill("VMB-A12")
+  await page.getByLabel("미터 수").fill("12.5")
+  await page.getByLabel("위치").fill("동측")
+  await page.getByRole("button", { name: "저장" }).click()
 }
 
 async function createWork(page: Page): Promise<void> {
@@ -155,14 +152,18 @@ async function createWork(page: Page): Promise<void> {
   await page.getByLabel("구분").selectOption("연장")
   await page.getByLabel("이름 등록").fill("김민수")
   await page.getByRole("button", { name: "이름 추가" }).click()
-  await page.getByLabel("대표 층수").fill("3층")
   await page.getByLabel("작업 분류").fill("HF")
   await page.getByLabel("1번 작업 위치/제목").fill("A 3층")
   await page.getByLabel("1번 작업 내용").fill("VMB-A12 #1\n케이블 자켓 12.5m")
   await page.getByRole("button", { name: "작업 묶음 추가" }).click()
+  await selectBlockQuantity(page, 2)
   await page.getByLabel("2번 작업 위치/제목").fill("B 4층")
   await page.getByLabel("2번 작업 내용").fill("VMB-B22 #2\n케이블 자켓 5m")
   await page.getByRole("button", { name: "저장" }).click()
+}
+
+async function selectBlockQuantity(page: Page, position: number): Promise<void> {
+  await page.getByLabel(`${position}번 연결 물량일보`).selectOption({ index: 1 })
 }
 
 async function editParent(page: Page): Promise<void> {

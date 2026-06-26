@@ -21,7 +21,7 @@ export function exportWorkCsv(data: ReportStore): string {
   const joined = joinWorkReports(data.quantityReports, data.workReports)
   const rows = joined.kind === "ok" ? joined.rows : []
   return toCsv([
-    ["날짜", "구분", "라인", "장비호기", "출근자", "총원", "층수", "복사용 내용"],
+    ["날짜", "구분", "라인", "장비호기", "출근자", "총원", "작업 묶음", "복사용 내용"],
     ...rows.map((report) => [
       report.date,
       report.shift,
@@ -29,7 +29,7 @@ export function exportWorkCsv(data: ReportStore): string {
       report.equipmentUnit,
       report.workerNames.join(" / "),
       String(report.totalWorkers),
-      report.floor,
+      String(report.workBlocks.length),
       formatWorkCopyText(report),
     ]),
   ])

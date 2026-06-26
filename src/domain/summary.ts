@@ -43,8 +43,14 @@ export function summarizeReports(data: ReportData): readonly SummaryRow[] {
   const joined = joinWorkReports(data.quantityReports, data.workReports)
   if (joined.kind === "ok") {
     for (const workReport of joined.rows) {
-      const current = getOrCreateDraft(drafts, workReport)
-      current.workReports.push(workReport)
+      for (const quantityReport of workReport.quantityReports) {
+        const current = getOrCreateDraft(drafts, {
+          date: workReport.date,
+          line: quantityReport.line,
+          equipmentUnit: quantityReport.equipmentUnit,
+        })
+        current.workReports.push(workReport)
+      }
     }
   }
 

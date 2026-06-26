@@ -1,7 +1,6 @@
 import type { ReactElement } from "react"
 import { useMemo, useState } from "react"
 import {
-  type QuantityReport,
   type WorkFieldErrors,
   type WorkInput,
   type WorkReport,
@@ -13,21 +12,14 @@ import {
 import type { ReportStore } from "../domain/store"
 import type { WorkBlockInput } from "../domain/workCopy"
 import { FormField, ReadOnlyField } from "./FormField"
-import { InlineQuantityCreator } from "./InlineQuantityCreator"
 import { WorkBlocksEditor } from "./WorkBlocksEditor"
 import { WorkFormActions } from "./WorkFormActions"
-import { WorkParentSelector } from "./WorkParentSelector"
-import { WorkParentSummary } from "./WorkParentSummary"
 import { WorkReportList } from "./WorkReportList"
 import { WorkShiftSelect } from "./WorkShiftSelect"
 import { WorkerToggleGroup } from "./WorkerToggleGroup"
 import { EMPTY_WORK_INPUT } from "./workFormDefaults"
-import {
-  clearQuantityAndWorkBlocksErrors,
-  clearWorkBlocksError,
-  clearWorkerNamesError,
-} from "./workFormErrors"
-import { workInputFromReport, workInputWithSelectedQuantity } from "./workFormTransforms"
+import { clearWorkBlocksError, clearWorkerNamesError } from "./workFormErrors"
+import { workInputFromReport } from "./workFormTransforms"
 import { deriveWorkRows, filterWorkRows } from "./workReportRows"
 
 type WorkTabProps = {
@@ -42,17 +34,11 @@ export function WorkTab(props: WorkTabProps): ReactElement {
   const [filter, setFilter] = useState<string>("")
   const [notice, setNotice] = useState<string>("")
   const [pendingWorkerName, setPendingWorkerName] = useState<string>("")
-  const [showQuantityCreator, setShowQuantityCreator] = useState<boolean>(false)
 
-  const selectedQuantity = props.data.quantityReports.find(
-    (report) => report.id === form.quantityReportId,
-  )
   const availableWorkerNames = useMemo(
     () => normalizeWorkerNames([...props.data.registeredWorkerNames, ...form.workerNames]),
     [form.workerNames, props.data.registeredWorkerNames],
   )
-  const hasQuantityReports = props.data.quantityReports.length > 0
-  const shouldShowQuantityCreator = !hasQuantityReports || showQuantityCreator
   const joinedRows = useMemo(() => deriveWorkRows(props.data), [props.data])
   const rows = useMemo(() => filterWorkRows(joinedRows, filter), [filter, joinedRows])
 
@@ -95,17 +81,6 @@ export function WorkTab(props: WorkTabProps): ReactElement {
     setNotice("작업일보를 삭제했습니다.")
   }
 
-  function createAndSelectQuantity(report: QuantityReport): void {
-    props.onChange({
-      ...props.data,
-      quantityReports: [report, ...props.data.quantityReports],
-    })
-    setForm(workInputWithSelectedQuantity(form, report.id, report))
-    setShowQuantityCreator(false)
-    setErrors({})
-    setNotice("물량일보를 만들고 작업일보에 연결했습니다.")
-  }
-
   function registerWorker(): void {
     const names = normalizeWorkerNames([pendingWorkerName])
     for (const name of names) {
@@ -126,12 +101,6 @@ export function WorkTab(props: WorkTabProps): ReactElement {
       : [...form.workerNames, name]
     setForm({ ...form, workerNames: normalizeWorkerNames(workerNames) })
     setErrors(clearWorkerNamesError(errors))
-  }
-
-  function selectQuantity(quantityReportId: string): void {
-    const quantity = props.data.quantityReports.find((report) => report.id === quantityReportId)
-    setForm(workInputWithSelectedQuantity(form, quantityReportId, quantity))
-    setErrors(clearQuantityAndWorkBlocksErrors(errors))
   }
 
   function updateWorkBlocks(workBlocks: readonly WorkBlockInput[]): void {
@@ -159,22 +128,6 @@ export function WorkTab(props: WorkTabProps): ReactElement {
           <p className="eyebrow">작업일보 데이터</p>
           <h2 id="work-heading">{editingId.length > 0 ? "작업일보 수정" : "작업일보 작성"}</h2>
         </div>
-        <WorkParentSelector
-          error={errors.quantityReportId}
-          expanded={showQuantityCreator}
-          onSelect={selectQuantity}
-          onToggleCreator={() => setShowQuantityCreator(!showQuantityCreator)}
-          quantityReports={props.data.quantityReports}
-          selectedId={form.quantityReportId}
-        />
-        {shouldShowQuantityCreator ? (
-          <InlineQuantityCreator
-            onCancel={hasQuantityReports ? () => setShowQuantityCreator(false) : undefined}
-            onCreate={createAndSelectQuantity}
-          />
-        ) : null}
-
-        <WorkParentSummary quantity={selectedQuantity} />
 
         <div className="form-grid">
           <FormField
@@ -186,13 +139,6 @@ export function WorkTab(props: WorkTabProps): ReactElement {
             value={form.date}
           />
           <WorkShiftSelect onChange={(shift) => setForm({ ...form, shift })} value={form.shift} />
-          <FormField
-            error={errors.floor}
-            label="대표 층수"
-            name="work-floor"
-            onChange={(event) => setForm({ ...form, floor: event.target.value })}
-            value={form.floor}
-          />
         </div>
 
         <WorkerToggleGroup
@@ -216,6 +162,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
           onBlocksChange={updateWorkBlocks}
           onClosingNoteChange={(closingNote) => setForm({ ...form, closingNote })}
           onSectionLabelChange={(sectionLabel) => setForm({ ...form, sectionLabel })}
+          quantityReports={props.data.quantityReports}
           sectionLabel={form.sectionLabel}
         />
 

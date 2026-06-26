@@ -16,14 +16,33 @@ export function joinWorkReports(
   const quantityById = new Map(quantityReports.map((report) => [report.id, report]))
   const rows: WorkReportView[] = []
   for (const workReport of workReports) {
-    const quantityReport = quantityById.get(workReport.quantityReportId)
-    if (quantityReport === undefined) {
-      return {
-        kind: "error",
-        message: "작업일보가 존재하지 않는 물량일보에 연결되어 있습니다.",
-      }
-    }
-    rows.push(deriveWorkReportView(workReport, quantityReport))
+    const linkedQuantities = getLinkedQuantities(workReport, quantityById)
+    if (linkedQuantities === null) return missingParentError()
+    rows.push(deriveWorkReportView(workReport, linkedQuantities))
   }
   return { kind: "ok", rows }
+}
+
+function getLinkedQuantities(
+  workReport: WorkReport,
+  quantityById: ReadonlyMap<string, QuantityReport>,
+): readonly QuantityReport[] | null {
+  const linkedQuantities: QuantityReport[] = []
+  const seenIds = new Set<string>()
+  for (const block of workReport.workBlocks) {
+    const quantityReport = quantityById.get(block.quantityReportId)
+    if (quantityReport === undefined) return null
+    if (!seenIds.has(quantityReport.id)) {
+      linkedQuantities.push(quantityReport)
+      seenIds.add(quantityReport.id)
+    }
+  }
+  return linkedQuantities
+}
+
+function missingParentError(): JoinedResult {
+  return {
+    kind: "error",
+    message: "작업일보가 존재하지 않는 물량일보에 연결되어 있습니다.",
+  }
 }

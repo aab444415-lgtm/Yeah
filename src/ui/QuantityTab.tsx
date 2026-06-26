@@ -243,7 +243,9 @@ export function QuantityTab(props: QuantityTabProps): ReactElement {
 }
 
 function countLinked(quantityReportId: string, data: ReportStore): number {
-  return data.workReports.filter((report) => report.quantityReportId === quantityReportId).length
+  return data.workReports.filter((report) =>
+    report.workBlocks.some((block) => block.quantityReportId === quantityReportId),
+  ).length
 }
 
 function makeId(prefix: string): string {

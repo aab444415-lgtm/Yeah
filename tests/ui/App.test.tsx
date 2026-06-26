@@ -26,11 +26,12 @@ describe("report app UI", () => {
 
     await createQuantity(user)
     await user.click(screen.getByRole("tab", { name: "작업일보" }))
+    const firstParentSelect = screen.getByLabelText("1번 연결 물량일보")
     await user.selectOptions(
-      screen.getByLabelText("연결 물량일보"),
-      screen.getByRole("option", { name: /RMD-001/u }),
+      firstParentSelect,
+      within(firstParentSelect).getByRole("option", { name: /RMD-001/u }),
     )
-    expect(screen.getByLabelText("1번 작업 위치/제목")).toHaveDisplayValue("A")
+    expect(screen.getByLabelText("1번 작업 위치/제목")).toHaveDisplayValue("A 동측")
     expect(screen.getByLabelText("1번 작업 내용")).toHaveDisplayValue("VMB-A12\n케이블 자켓 12.5m")
     await user.type(screen.getByLabelText("작업 날짜"), "2026-06-26")
     await user.selectOptions(screen.getByLabelText("구분"), "연장")
@@ -38,19 +39,25 @@ describe("report app UI", () => {
     await registerWorker(user, "이서연")
     await user.click(screen.getByRole("button", { name: "이서연" }))
     expect(screen.getByLabelText("작업일보 총원")).toHaveTextContent("1명")
-    await user.type(screen.getByLabelText("대표 층수"), "3층")
     await user.type(screen.getByLabelText("작업 분류"), "HF")
     await user.clear(screen.getByLabelText("1번 작업 위치/제목"))
     await user.type(screen.getByLabelText("1번 작업 위치/제목"), "A 3층")
     await user.clear(screen.getByLabelText("1번 작업 내용"))
     await user.type(screen.getByLabelText("1번 작업 내용"), "VMB-A12 #1{enter}케이블 자켓 12.5m")
     await user.click(screen.getByRole("button", { name: "작업 묶음 추가" }))
+    const secondParentSelect = screen.getByLabelText("2번 연결 물량일보")
+    await user.selectOptions(
+      secondParentSelect,
+      within(secondParentSelect).getByRole("option", { name: /RMD-001/u }),
+    )
+    await user.clear(screen.getByLabelText("2번 작업 위치/제목"))
     await user.type(screen.getByLabelText("2번 작업 위치/제목"), "B 4층")
+    await user.clear(screen.getByLabelText("2번 작업 내용"))
     await user.type(screen.getByLabelText("2번 작업 내용"), "VMB-B22 #2{enter}케이블 자켓 5m")
     await user.click(screen.getByRole("button", { name: "저장" }))
 
     const workList = screen.getByLabelText("작업일보 목록")
-    expect(within(workList).getByText("김민수 · 1명 · 3층")).toBeInTheDocument()
+    expect(within(workList).getByText("김민수 · 1명 · 작업 2건")).toBeInTheDocument()
     expect(within(workList).getByText("2026-06-26 · A · 2호기")).toBeInTheDocument()
     expect(within(workList).getByLabelText("작업일보 복사용 내용").textContent).toBe(
       [
@@ -74,35 +81,19 @@ describe("report app UI", () => {
     expect(screen.getByText("1명", { selector: "strong" })).toBeInTheDocument()
   })
 
-  it("Given 작업일보 flow without a parent When creating 물량일보 inline Then it is selected for the child", async () => {
+  it("Given 작업일보 flow without quantity data When saving Then block parent error appears", async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole("tab", { name: "작업일보" }))
-    await user.type(screen.getByLabelText("같이 만들 날짜"), "2026-06-25")
-    await user.type(screen.getByLabelText("같이 만들 라인"), "A")
-    await user.type(screen.getByLabelText("같이 만들 장비호기"), "2호기")
-    await user.type(screen.getByLabelText("같이 만들 RMD번호"), "RMD-001")
-    await user.type(screen.getByLabelText("같이 만들 VMB코드"), "VMB-A12")
-    await user.type(screen.getByLabelText("같이 만들 미터 수"), "12.5")
-    await user.type(screen.getByLabelText("같이 만들 위치"), "동측")
-    await user.click(screen.getByRole("button", { name: "물량일보 같이 만들기" }))
-
-    expect(screen.getByText("물량 1건")).toBeInTheDocument()
-    expect(screen.getByLabelText("연결 물량일보")).toHaveDisplayValue(
-      "2026-06-25 / A / 2호기 / RMD-001",
-    )
-    expect(screen.getByLabelText("상위 물량일보에서 가져온 값")).toHaveTextContent("2026-06-25")
-    expect(screen.getByLabelText("1번 작업 위치/제목")).toHaveDisplayValue("A")
-    expect(screen.getByLabelText("1번 작업 내용")).toHaveDisplayValue("VMB-A12\n케이블 자켓 12.5m")
-
     await user.type(screen.getByLabelText("작업 날짜"), "2026-06-25")
     await registerWorker(user, "김민수")
-    await user.type(screen.getByLabelText("대표 층수"), "3층")
+    await user.type(screen.getByLabelText("1번 작업 위치/제목"), "A 동측")
+    await user.type(screen.getByLabelText("1번 작업 내용"), "VMB-A12{enter}케이블 자켓 12.5m")
     await user.click(screen.getByRole("button", { name: "저장" }))
 
-    expect(screen.getByText("작업 1건")).toBeInTheDocument()
-    expect(screen.getByText("2026-06-25 · A · 2호기")).toBeInTheDocument()
+    expect(screen.getByText("작업 묶음마다 물량일보를 선택하세요.")).toBeInTheDocument()
+    expect(screen.getByText("작업 0건")).toBeInTheDocument()
   })
 
   it("Given saved reports When the app remounts Then localStorage restores linked parent and child", async () => {
@@ -117,7 +108,7 @@ describe("report app UI", () => {
     expect(screen.getByText("물량 1건")).toBeInTheDocument()
     expect(screen.getByText("작업 1건")).toBeInTheDocument()
     await user.click(screen.getByRole("tab", { name: "작업일보" }))
-    expect(screen.getByText("김민수 · 1명 · 3층")).toBeInTheDocument()
+    expect(screen.getByText("김민수 · 1명 · 작업 1건")).toBeInTheDocument()
     expect(screen.getByText("2026-06-25 · A · 2호기")).toBeInTheDocument()
   })
 
@@ -172,13 +163,13 @@ async function createQuantity(user: ReturnType<typeof userEvent.setup>): Promise
 
 async function createWork(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole("tab", { name: "작업일보" }))
+  const parentSelect = screen.getByLabelText("1번 연결 물량일보")
   await user.selectOptions(
-    screen.getByLabelText("연결 물량일보"),
-    screen.getByRole("option", { name: /RMD-001/u }),
+    parentSelect,
+    within(parentSelect).getByRole("option", { name: /RMD-001/u }),
   )
   await user.type(screen.getByLabelText("작업 날짜"), "2026-06-25")
   await registerWorker(user, "김민수")
-  await user.type(screen.getByLabelText("대표 층수"), "3층")
   await user.click(screen.getByRole("button", { name: "저장" }))
   await user.click(screen.getByRole("tab", { name: "물량일보" }))
 }

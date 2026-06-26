@@ -48,7 +48,7 @@
 
 .work-block {
   display: grid;
-  grid-template-columns: minmax(140px, 0.8fr) minmax(180px, 1.2fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: var(--space-3);
   min-width: 0;
@@ -57,6 +57,19 @@
   border-radius: 8px;
   padding: var(--space-3);
   background: var(--surface-panel);
+}
+
+.work-block .field {
+  min-width: 0;
+}
+
+.work-block .field:nth-of-type(3) {
+  grid-column: 1 / -1;
+}
+
+.work-block > .icon-button {
+  grid-column: 1 / -1;
+  justify-self: end;
 }
 
 .work-block legend {
@@ -68,6 +81,13 @@
 
 .work-block textarea {
   min-height: 110px;
+}
+
+.work-block-parent-summary {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .icon-button {

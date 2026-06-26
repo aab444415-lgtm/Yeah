@@ -152,8 +152,10 @@ function hasUniqueStoreIds(data: ReportStore): boolean {
 }
 
 function hasOrphanWorkReports(data: ReportStore): boolean {
-  const quantityIds = new Set(data.quantityReports.map((report) => report.id))
-  return data.workReports.some((report: WorkReport) => !quantityIds.has(report.quantityReportId))
+  const quantityIds = new Set<string>(data.quantityReports.map((report) => report.id))
+  return data.workReports.some((report: WorkReport) =>
+    report.workBlocks.some((block) => !quantityIds.has(block.quantityReportId)),
+  )
 }
 
 function isStoreConsistent(data: ReportStore): boolean {

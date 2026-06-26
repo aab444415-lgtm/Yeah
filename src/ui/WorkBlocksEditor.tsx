@@ -1,11 +1,14 @@
 import { Plus, Trash2 } from "lucide-react"
 import { type ReactElement, useRef } from "react"
+import type { QuantityReport } from "../domain/reports"
 import { EMPTY_WORK_BLOCK_INPUT, type WorkBlockInput } from "../domain/workCopy"
+import { createWorkBlockInputFromQuantity } from "../domain/workCopy"
 
 type WorkBlocksEditorProps = {
   readonly sectionLabel: string
   readonly blocks: readonly WorkBlockInput[]
   readonly closingNote: string
+  readonly quantityReports: readonly QuantityReport[]
   readonly error: string | undefined
   readonly onSectionLabelChange: (value: string) => void
   readonly onBlocksChange: (blocks: readonly WorkBlockInput[]) => void
@@ -22,6 +25,11 @@ export function WorkBlocksEditor(props: WorkBlocksEditorProps): ReactElement {
     props.onBlocksChange(
       blocks.map((block, current) => (current === index ? { ...block, ...patch } : block)),
     )
+  }
+
+  function selectQuantity(index: number, quantityReportId: string): void {
+    const quantity = props.quantityReports.find((report) => report.id === quantityReportId)
+    updateBlock(index, createWorkBlockInputFromQuantity(quantity))
   }
 
   function addBlock(): void {
@@ -51,43 +59,74 @@ export function WorkBlocksEditor(props: WorkBlocksEditorProps): ReactElement {
       </label>
 
       <div className="work-block-list">
-        {blocks.map((block, index) => (
-          <fieldset className="work-block" key={blockKeys[index]}>
-            <legend>{index + 1}번 작업</legend>
-            <label className="field" htmlFor={`work-block-title-${index}`}>
-              <span>{index + 1}번 작업 위치/제목</span>
-              <input
-                aria-invalid={props.error !== undefined && block.title.trim().length === 0}
-                id={`work-block-title-${index}`}
-                onChange={(event) => updateBlock(index, { title: event.target.value })}
-                placeholder="P2L 1F BUNKER-1 연결"
-                value={block.title}
-              />
-            </label>
-            <label className="field" htmlFor={`work-block-detail-${index}`}>
-              <span>{index + 1}번 작업 내용</span>
-              <textarea
-                aria-invalid={props.error !== undefined && block.detailText.trim().length === 0}
-                id={`work-block-detail-${index}`}
-                onChange={(event) => updateBlock(index, { detailText: event.target.value })}
-                placeholder={"SGPL2HF0P01_CABE06  #OUT\n케이블 자켓 16m"}
-                rows={4}
-                value={block.detailText}
-              />
-            </label>
-            {blocks.length > 1 ? (
-              <button
-                aria-label={`${index + 1}번 작업 삭제`}
-                className="danger icon-button"
-                onClick={() => removeBlock(index)}
-                title={`${index + 1}번 작업 삭제`}
-                type="button"
-              >
-                <Trash2 size={16} />
-              </button>
-            ) : null}
-          </fieldset>
-        ))}
+        {blocks.map((block, index) => {
+          const selectedQuantity = props.quantityReports.find(
+            (report) => report.id === block.quantityReportId,
+          )
+          return (
+            <fieldset className="work-block" key={blockKeys[index]}>
+              <legend>{index + 1}번 작업</legend>
+              <label className="field" htmlFor={`work-block-parent-${index}`}>
+                <span>{index + 1}번 연결 물량일보</span>
+                <select
+                  aria-invalid={props.error !== undefined && block.quantityReportId.length === 0}
+                  id={`work-block-parent-${index}`}
+                  onChange={(event) => selectQuantity(index, event.target.value)}
+                  value={block.quantityReportId}
+                >
+                  <option value="">
+                    {props.quantityReports.length > 0
+                      ? "물량일보 선택"
+                      : "등록된 물량일보가 없습니다"}
+                  </option>
+                  {props.quantityReports.map((report) => (
+                    <option key={report.id} value={report.id}>
+                      {formatQuantityOption(report)}
+                    </option>
+                  ))}
+                </select>
+                {selectedQuantity !== undefined ? (
+                  <span className="work-block-parent-summary">
+                    {selectedQuantity.vmbCode} · {selectedQuantity.meterCount}m ·{" "}
+                    {selectedQuantity.location}
+                  </span>
+                ) : null}
+              </label>
+              <label className="field" htmlFor={`work-block-title-${index}`}>
+                <span>{index + 1}번 작업 위치/제목</span>
+                <input
+                  aria-invalid={props.error !== undefined && block.title.trim().length === 0}
+                  id={`work-block-title-${index}`}
+                  onChange={(event) => updateBlock(index, { title: event.target.value })}
+                  placeholder="P2L 1F BUNKER-1 연결"
+                  value={block.title}
+                />
+              </label>
+              <label className="field" htmlFor={`work-block-detail-${index}`}>
+                <span>{index + 1}번 작업 내용</span>
+                <textarea
+                  aria-invalid={props.error !== undefined && block.detailText.trim().length === 0}
+                  id={`work-block-detail-${index}`}
+                  onChange={(event) => updateBlock(index, { detailText: event.target.value })}
+                  placeholder={"SGPL2HF0P01_CABE06  #OUT\n케이블 자켓 16m"}
+                  rows={4}
+                  value={block.detailText}
+                />
+              </label>
+              {blocks.length > 1 ? (
+                <button
+                  aria-label={`${index + 1}번 작업 삭제`}
+                  className="danger icon-button"
+                  onClick={() => removeBlock(index)}
+                  title={`${index + 1}번 작업 삭제`}
+                  type="button"
+                >
+                  <Trash2 size={16} />
+                </button>
+              ) : null}
+            </fieldset>
+          )
+        })}
       </div>
 
       {props.error !== undefined ? <p className="field-error">{props.error}</p> : null}
@@ -115,4 +154,8 @@ function useBlockKeys(length: number): readonly string[] {
   while (keys.current.length < length) keys.current.push(crypto.randomUUID())
   if (keys.current.length > length) keys.current = keys.current.slice(0, length)
   return keys.current
+}
+
+function formatQuantityOption(report: QuantityReport): string {
+  return `${report.date} / ${report.line} / ${report.equipmentUnit} / ${report.rmdNumber}`
 }

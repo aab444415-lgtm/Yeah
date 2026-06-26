@@ -27,11 +27,9 @@ export type QuantityInput = {
 }
 
 export type WorkInput = {
-  readonly quantityReportId: string
   readonly date: string
   readonly shift: WorkShift
   readonly workerNames: readonly string[]
-  readonly floor: string
   readonly sectionLabel: string
   readonly workBlocks: readonly WorkBlockInput[]
   readonly closingNote: string
@@ -52,11 +50,9 @@ export const QuantityReportSchema = z.object({
 
 export const WorkReportSchema = z.object({
   id: WorkReportIdSchema,
-  quantityReportId: QuantityReportIdSchema,
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   shift: WorkShiftSchema,
   workerNames: z.array(z.string().min(1)).min(1),
-  floor: z.string().min(1),
   sectionLabel: z.string(),
   workBlocks: z.array(WorkBlockSchema).min(1),
   closingNote: z.string(),
@@ -73,6 +69,7 @@ export type WorkFieldErrors = Partial<Record<keyof WorkInput, string>>
 export type WorkReportView = WorkReport & {
   readonly line: string
   readonly equipmentUnit: string
+  readonly quantityReports: readonly QuantityReport[]
   readonly totalWorkers: number
 }
 
@@ -112,14 +109,10 @@ export function validateQuantityInput(input: QuantityInput): QuantityFieldErrors
 
 export function validateWorkInput(input: WorkInput): WorkFieldErrors {
   const errors: WorkFieldErrors = {}
-  if (input.quantityReportId.trim().length === 0) {
-    errors.quantityReportId = "연결할 물량일보를 선택하세요."
-  }
   if (input.date.trim().length === 0) errors.date = "작업 날짜를 입력하세요."
   if (normalizeWorkerNames(input.workerNames).length === 0) {
     errors.workerNames = "출근자를 한 명 이상 선택하세요."
   }
-  if (input.floor.trim().length === 0) errors.floor = "층수를 입력하세요."
   const workBlocksError = getWorkBlocksError(input.workBlocks)
   if (workBlocksError !== undefined) errors.workBlocks = workBlocksError
   return errors
@@ -158,11 +151,9 @@ export function createWorkReport(args: CreateWorkArgs): WorkReport {
 
   return WorkReportSchema.parse({
     id: args.id,
-    quantityReportId: args.input.quantityReportId,
     date: args.input.date.trim(),
     shift: args.input.shift,
     workerNames: normalizeWorkerNames(args.input.workerNames),
-    floor: args.input.floor.trim(),
     sectionLabel: normalizeSectionLabel(args.input.sectionLabel),
     workBlocks: normalizeWorkBlocks(args.input.workBlocks),
     closingNote: normalizeClosingNote(args.input.closingNote),
@@ -178,12 +169,13 @@ export function updateWorkReport(report: WorkReport, input: WorkInput, now: stri
 
 export function deriveWorkReportView(
   workReport: WorkReport,
-  quantityReport: QuantityReport,
+  quantityReports: readonly QuantityReport[],
 ): WorkReportView {
   return {
     ...workReport,
-    line: quantityReport.line,
-    equipmentUnit: quantityReport.equipmentUnit,
+    line: joinUnique(quantityReports.map((report) => report.line)),
+    equipmentUnit: joinUnique(quantityReports.map((report) => report.equipmentUnit)),
+    quantityReports,
     totalWorkers: workReport.workerNames.length,
   }
 }
@@ -199,4 +191,8 @@ function hasErrors(errors: QuantityFieldErrors | WorkFieldErrors): boolean {
 function isPositiveNumber(value: string): boolean {
   const parsed = Number(value)
   return value.trim().length > 0 && Number.isFinite(parsed) && parsed > 0
+}
+
+function joinUnique(values: readonly string[]): string {
+  return Array.from(new Set(values)).join(" / ")
 }

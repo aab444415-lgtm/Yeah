@@ -36,7 +36,8 @@ export function WorkReportList(props: WorkReportListProps): ReactElement {
               <article className="report-row report-row-with-copy" key={report.id}>
                 <div>
                   <strong>
-                    {report.workerNames.join(", ")} · {report.totalWorkers}명 · {report.floor}
+                    {report.workerNames.join(", ")} · {report.totalWorkers}명 · 작업{" "}
+                    {report.workBlocks.length}건
                   </strong>
                   <span>
                     {report.date} · {report.line} · {report.equipmentUnit}

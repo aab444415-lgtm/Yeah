@@ -10,10 +10,12 @@ describe("work report copy text", () => {
       sectionLabel: "HF",
       workBlocks: [
         {
+          quantityReportId: "qty-1",
           title: "P2L 1F BUNKER-1 연결",
           detailLines: ["SGPL2HF0P01_CABE06  #OUT", "케이블 자켓 16m"],
         },
         {
+          quantityReportId: "qty-2",
           title: "P2L 2F 말단",
           detailLines: ["SGPL2HF0P01_VMBE03  #IN", "케이블 자켓 68m"],
         },
@@ -48,10 +50,12 @@ describe("work report copy text", () => {
       sectionLabel: "",
       workBlocks: [
         {
+          quantityReportId: "qty-1",
           title: "P3L_6F",
           detailLines: ["WWO3708호기_PVC 실링캡작업"],
         },
         {
+          quantityReportId: "qty-2",
           title: "P2L_2F",
           detailLines: ["WKBBF01_PVC 실링캡작업", "WSNTF01_PVC 실링캡작업"],
         },

@@ -3,10 +3,10 @@ import type { ReportStore } from "../domain/store"
 
 export function deriveWorkRows(data: ReportStore): readonly WorkReportView[] {
   return data.workReports.flatMap((workReport) => {
-    const quantity = data.quantityReports.find(
-      (report) => report.id === workReport.quantityReportId,
+    const quantityReports = data.quantityReports.filter((quantity) =>
+      workReport.workBlocks.some((block) => block.quantityReportId === quantity.id),
     )
-    return quantity === undefined ? [] : [deriveWorkReportView(workReport, quantity)]
+    return quantityReports.length === 0 ? [] : [deriveWorkReportView(workReport, quantityReports)]
   })
 }
 
@@ -25,8 +25,12 @@ function searchableWorkText(report: WorkReportView): string {
     report.line,
     report.equipmentUnit,
     report.workerNames.join(" "),
-    report.floor,
     report.sectionLabel,
+    ...report.quantityReports.flatMap((quantity) => [
+      quantity.rmdNumber,
+      quantity.vmbCode,
+      quantity.location,
+    ]),
     ...report.workBlocks.flatMap((block) => [block.title, ...block.detailLines]),
   ]
     .join(" ")

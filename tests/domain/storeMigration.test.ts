@@ -26,13 +26,17 @@ describe("report store migration", () => {
       workReports: [
         {
           id: "work-legacy",
-          quantityReportId: quantity.id,
           date: "2026-06-25",
           shift: "주간",
           workerNames: ["김민수"],
-          floor: "3층",
           sectionLabel: "",
-          workBlocks: [{ title: "A", detailLines: ["VMB-A12", "케이블 자켓 12.5m"] }],
+          workBlocks: [
+            {
+              quantityReportId: quantity.id,
+              title: "A 동측",
+              detailLines: ["VMB-A12", "케이블 자켓 12.5m"],
+            },
+          ],
           closingNote: "",
         },
       ],
@@ -68,11 +72,52 @@ describe("report store migration", () => {
           sectionLabel: "",
           workBlocks: [
             {
+              quantityReportId: quantity.id,
               title: "A 3층",
               detailLines: ["1. VMB-A12 #1 케이블 12.5m 자켓 3m"],
             },
           ],
           closingNote: "",
+        },
+      ],
+    })
+  })
+
+  it("Given previous block work storage When parsing Then the parent id moves into each block", () => {
+    const quantity = makeQuantityReport({ id: "qty-block" })
+    const source = JSON.stringify({
+      version: 1,
+      registeredWorkerNames: ["김민수"],
+      quantityReports: [quantity],
+      workReports: [
+        {
+          id: "work-block",
+          quantityReportId: quantity.id,
+          date: "2026-06-26",
+          shift: "연장",
+          workerNames: ["김민수"],
+          floor: "3층",
+          sectionLabel: "HF",
+          workBlocks: [{ title: "A 3층", detailLines: ["VMB-A12 #1", "케이블 자켓 12.5m"] }],
+          closingNote: "",
+          createdAt: testNow,
+          updatedAt: testNow,
+        },
+      ],
+    })
+
+    expect(parseStoredData(source)).toMatchObject({
+      workReports: [
+        {
+          id: "work-block",
+          sectionLabel: "HF",
+          workBlocks: [
+            {
+              quantityReportId: quantity.id,
+              title: "A 3층",
+              detailLines: ["VMB-A12 #1", "케이블 자켓 12.5m"],
+            },
+          ],
         },
       ],
     })

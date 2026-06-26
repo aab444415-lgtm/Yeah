@@ -11,6 +11,7 @@ export const WorkCopyItemSchema = z.object({
 })
 
 export const WorkBlockSchema = z.object({
+  quantityReportId: z.string().min(1),
   title: z.string().min(1),
   detailLines: z.array(z.string().min(1)).min(1),
 })
@@ -26,12 +27,15 @@ export type WorkCopyItemInput = {
 }
 
 export type WorkBlockInput = {
+  readonly quantityReportId: string
   readonly title: string
   readonly detailText: string
 }
 
 export type QuantityCopySource = {
+  readonly id: string
   readonly line: string
+  readonly location: string
   readonly vmbCode: string
   readonly meterCount: number
 }
@@ -52,6 +56,7 @@ export const EMPTY_WORK_COPY_ITEM_INPUT: WorkCopyItemInput = {
 }
 
 export const EMPTY_WORK_BLOCK_INPUT: WorkBlockInput = {
+  quantityReportId: "",
   title: "",
   detailText: "",
 }
@@ -84,15 +89,26 @@ export function createWorkBlockInputFromQuantity(
 ): WorkBlockInput {
   if (quantity === undefined) return EMPTY_WORK_BLOCK_INPUT
   return {
-    title: quantity.line,
+    quantityReportId: quantity.id,
+    title: formatQuantityWorkTitle(quantity),
     detailText: [quantity.vmbCode, `케이블 자켓 ${formatMeter(quantity.meterCount)}m`].join("\n"),
   }
 }
 
-export function createWorkBlockFromQuantity(quantity: QuantityCopySource | undefined): WorkBlock {
-  if (quantity === undefined) return { title: "-", detailLines: ["-"] }
+export function createWorkBlockFromQuantity(
+  quantity: QuantityCopySource | undefined,
+  fallbackQuantityReportId: string,
+): WorkBlock {
+  if (quantity === undefined) {
+    return {
+      quantityReportId: fallbackQuantityReportId,
+      title: "-",
+      detailLines: ["-"],
+    }
+  }
   return WorkBlockSchema.parse({
-    title: quantity.line,
+    quantityReportId: quantity.id,
+    title: formatQuantityWorkTitle(quantity),
     detailLines: [quantity.vmbCode, `케이블 자켓 ${formatMeter(quantity.meterCount)}m`],
   })
 }
@@ -100,9 +116,11 @@ export function createWorkBlockFromQuantity(quantity: QuantityCopySource | undef
 export function createWorkBlocksFromCopyItems(
   items: readonly WorkCopyItem[],
   title: string,
+  quantityReportId: string,
 ): readonly WorkBlock[] {
   return [
     WorkBlockSchema.parse({
+      quantityReportId,
       title: title.trim().length > 0 ? title.trim() : "-",
       detailLines: formatWorkCopyItems(items),
     }),
@@ -119,6 +137,7 @@ export function toWorkCopyItemInput(items: readonly WorkCopyItem[]): readonly Wo
 
 export function toWorkBlockInput(blocks: readonly WorkBlock[]): readonly WorkBlockInput[] {
   return blocks.map((block) => ({
+    quantityReportId: block.quantityReportId,
     title: block.title,
     detailText: block.detailLines.join("\n"),
   }))
@@ -139,6 +158,7 @@ export function normalizeWorkCopyItems(
 export function normalizeWorkBlocks(items: readonly WorkBlockInput[]): readonly WorkBlock[] {
   return items.map((item) =>
     WorkBlockSchema.parse({
+      quantityReportId: item.quantityReportId.trim(),
       title: item.title.trim(),
       detailLines: splitDetailLines(item.detailText),
     }),
@@ -166,6 +186,9 @@ export function getWorkCopyItemsError(items: readonly WorkCopyItemInput[]): stri
 export function getWorkBlocksError(items: readonly WorkBlockInput[]): string | undefined {
   if (items.length === 0) return "작업을 한 개 이상 입력하세요."
   for (const item of items) {
+    if (item.quantityReportId.trim().length === 0) {
+      return "작업 묶음마다 물량일보를 선택하세요."
+    }
     if (item.title.trim().length === 0) return "작업 위치/제목을 입력하세요."
     if (splitDetailLines(item.detailText).length === 0) return "작업 내용을 입력하세요."
   }
@@ -201,6 +224,10 @@ function splitDetailLines(value: string): readonly string[] {
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
+}
+
+function formatQuantityWorkTitle(quantity: QuantityCopySource): string {
+  return [quantity.line, quantity.location].filter((value) => value.trim().length > 0).join(" ")
 }
 
 function isNonNegativeNumber(value: string): boolean {

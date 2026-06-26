@@ -20,13 +20,12 @@ const defaultQuantityInput: QuantityInput = {
   location: "동측",
 }
 
-const defaultWorkInput: Omit<WorkInput, "quantityReportId"> = {
+const defaultWorkInput: WorkInput = {
   date: "2026-06-25",
   shift: "주간",
   workerNames: ["김민수", "이서연"],
-  floor: "3층",
   sectionLabel: "",
-  workBlocks: [{ title: "A 3층", detailText: "VMB-A12\n케이블 자켓 12.5m" }],
+  workBlocks: [defaultWorkBlock("qty-1")],
   closingNote: "",
 }
 
@@ -40,7 +39,7 @@ type WorkFixtureArgs = {
   readonly id?: string
   readonly now?: string
   readonly quantityReportId: string
-  readonly input?: Partial<Omit<WorkInput, "quantityReportId">>
+  readonly input?: Partial<WorkInput>
 }
 
 type StoreFixtureArgs = {
@@ -63,9 +62,17 @@ export function makeWorkReport(args: WorkFixtureArgs): WorkReport {
     input: {
       ...defaultWorkInput,
       ...args.input,
-      quantityReportId: args.quantityReportId,
+      workBlocks: args.input?.workBlocks ?? [defaultWorkBlock(args.quantityReportId)],
     },
   })
+}
+
+function defaultWorkBlock(quantityReportId: string): WorkInput["workBlocks"][number] {
+  return {
+    quantityReportId,
+    title: "A 동측",
+    detailText: "VMB-A12\n케이블 자켓 12.5m",
+  }
 }
 
 export function makeStore(args: StoreFixtureArgs = {}): ReportStore {
