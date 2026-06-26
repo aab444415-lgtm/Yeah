@@ -123,6 +123,15 @@ All spacing derives from 4px.
 - **Accessibility**: command buttons are named with record context.
 - **Motion**: background transition only.
 
+### Line Category Filter
+
+- **Structure**: line-scoped chip group above report lists and summary details.
+- **Variants**: all lines, selected line, empty-hidden.
+- **Spacing**: `--space-2`, `--space-3`.
+- **States**: selected uses `aria-pressed`, hover follows button defaults.
+- **Accessibility**: each screen provides a distinct `aria-label` for the chip group.
+- **Motion**: color and border transitions only.
+
 ### Metric Chip
 
 - **Structure**: compact inline metric inside the top status strip.

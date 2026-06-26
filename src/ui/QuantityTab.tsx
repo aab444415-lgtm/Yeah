@@ -1,6 +1,6 @@
-import { Pencil, Plus, Save, Trash2, X } from "lucide-react"
+import { Plus, Save, X } from "lucide-react"
 import type { ReactElement } from "react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import {
   type QuantityFieldErrors,
   type QuantityInput,
@@ -11,6 +11,7 @@ import {
 } from "../domain/reports"
 import type { ReportStore } from "../domain/store"
 import { FormField } from "./FormField"
+import { QuantityReportList } from "./QuantityReportList"
 
 type QuantityTabProps = {
   readonly data: ReportStore
@@ -32,25 +33,8 @@ export function QuantityTab(props: QuantityTabProps): ReactElement {
   const [errors, setErrors] = useState<QuantityFieldErrors>({})
   const [editingId, setEditingId] = useState<string>("")
   const [filter, setFilter] = useState<string>("")
+  const [selectedLine, setSelectedLine] = useState<string>("")
   const [notice, setNotice] = useState<string>("")
-
-  const rows = useMemo(() => {
-    const query = filter.trim().toLowerCase()
-    if (query.length === 0) return props.data.quantityReports
-    return props.data.quantityReports.filter((report) =>
-      [
-        report.date,
-        report.line,
-        report.equipmentUnit,
-        report.rmdNumber,
-        report.vmbCode,
-        report.location,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    )
-  }, [filter, props.data.quantityReports])
 
   function submit(): void {
     const nextErrors = validateQuantityInput(form)
@@ -197,47 +181,15 @@ export function QuantityTab(props: QuantityTabProps): ReactElement {
         </p>
       </form>
 
-      <section className="panel list-panel" aria-label="물량일보 목록">
-        <div className="section-heading">
-          <p className="eyebrow">최근 물량일보</p>
-          <h2>물량일보 목록</h2>
-        </div>
-        <label className="field filter-field" htmlFor="quantity-filter">
-          <span>검색</span>
-          <input
-            id="quantity-filter"
-            onChange={(event) => setFilter(event.target.value)}
-            value={filter}
-          />
-        </label>
-        {rows.length === 0 ? (
-          <p className="empty-state">저장된 물량일보가 없습니다.</p>
-        ) : (
-          <div className="report-list">
-            {rows.map((report) => (
-              <article className="report-row" key={report.id}>
-                <div>
-                  <strong>
-                    {report.date} · {report.line} · {report.equipmentUnit}
-                  </strong>
-                  <span>
-                    {report.rmdNumber} / {report.vmbCode} · {report.location}
-                  </span>
-                  <span>미터 수 {formatNumber(report.meterCount)}</span>
-                </div>
-                <div className="row-actions">
-                  <button onClick={() => startEdit(report)} type="button">
-                    <Pencil size={15} /> 수정
-                  </button>
-                  <button className="danger" onClick={() => deleteReport(report)} type="button">
-                    <Trash2 size={15} /> 삭제
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <QuantityReportList
+        filter={filter}
+        onDelete={deleteReport}
+        onEdit={startEdit}
+        onFilterChange={setFilter}
+        onLineChange={setSelectedLine}
+        reports={props.data.quantityReports}
+        selectedLine={selectedLine}
+      />
     </section>
   )
 }
@@ -250,8 +202,4 @@ function countLinked(quantityReportId: string, data: ReportStore): number {
 
 function makeId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(value)
 }

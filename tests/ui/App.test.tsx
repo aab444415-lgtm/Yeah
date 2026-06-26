@@ -148,16 +148,60 @@ describe("report app UI", () => {
     expect(screen.getByText("물량 1건")).toBeInTheDocument()
     expect(screen.getByText(/RMD-001/u)).toBeInTheDocument()
   })
+
+  it("Given reports across lines When selecting a line category Then matching rows stay visible", async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await createQuantity(user)
+    await createQuantity(user, {
+      equipmentUnit: "3호기",
+      line: "B",
+      location: "서측",
+      meterCount: "7.5",
+      rmdNumber: "RMD-002",
+      vmbCode: "VMB-B12",
+    })
+
+    const quantityList = screen.getByLabelText("물량일보 목록")
+    const quantityCategories = within(quantityList).getByLabelText("물량일보 카테고리")
+    expect(within(quantityCategories).getByRole("button", { name: "전체 2" })).toBeInTheDocument()
+
+    await user.click(within(quantityCategories).getByRole("button", { name: "B 1" }))
+    expect(within(quantityList).getByText(/RMD-002/u)).toBeInTheDocument()
+    expect(within(quantityList).queryByText(/RMD-001/u)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("tab", { name: "통합현황" }))
+    const summaryCategories = screen.getByLabelText("통합현황 카테고리")
+    await user.click(within(summaryCategories).getByRole("button", { name: "B 1" }))
+
+    const summaryDetail = screen.getByLabelText("통합현황 상세")
+    expect(within(summaryDetail).getByText("2026-06-25 · B · 3호기")).toBeInTheDocument()
+    expect(within(summaryDetail).queryByText("2026-06-25 · A · 2호기")).not.toBeInTheDocument()
+  })
 })
 
-async function createQuantity(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await user.type(screen.getByLabelText("날짜"), "2026-06-25")
-  await user.type(screen.getByLabelText("라인"), "A")
-  await user.type(screen.getByLabelText("장비호기"), "2호기")
-  await user.type(screen.getByLabelText("RMD번호"), "RMD-001")
-  await user.type(screen.getByLabelText("VMB코드"), "VMB-A12")
-  await user.type(screen.getByLabelText("미터 수"), "12.5")
-  await user.type(screen.getByLabelText("위치"), "동측")
+type QuantityFormInput = {
+  readonly date?: string
+  readonly line?: string
+  readonly equipmentUnit?: string
+  readonly rmdNumber?: string
+  readonly vmbCode?: string
+  readonly meterCount?: string
+  readonly location?: string
+}
+
+async function createQuantity(
+  user: ReturnType<typeof userEvent.setup>,
+  input: QuantityFormInput = {},
+): Promise<void> {
+  await user.type(screen.getByLabelText("날짜"), input.date ?? "2026-06-25")
+  await user.type(screen.getByLabelText("라인"), input.line ?? "A")
+  await user.type(screen.getByLabelText("장비호기"), input.equipmentUnit ?? "2호기")
+  await user.type(screen.getByLabelText("RMD번호"), input.rmdNumber ?? "RMD-001")
+  await user.type(screen.getByLabelText("VMB코드"), input.vmbCode ?? "VMB-A12")
+  await user.type(screen.getByLabelText("미터 수"), input.meterCount ?? "12.5")
+  await user.type(screen.getByLabelText("위치"), input.location ?? "동측")
   await user.click(screen.getByRole("button", { name: "저장" }))
 }
 

@@ -20,7 +20,7 @@ import { WorkerToggleGroup } from "./WorkerToggleGroup"
 import { EMPTY_WORK_INPUT } from "./workFormDefaults"
 import { clearWorkBlocksError, clearWorkerNamesError } from "./workFormErrors"
 import { workInputFromReport } from "./workFormTransforms"
-import { deriveWorkRows, filterWorkRows } from "./workReportRows"
+import { deriveWorkRows } from "./workReportRows"
 
 type WorkTabProps = {
   readonly data: ReportStore
@@ -32,6 +32,7 @@ export function WorkTab(props: WorkTabProps): ReactElement {
   const [errors, setErrors] = useState<WorkFieldErrors>({})
   const [editingId, setEditingId] = useState<string>("")
   const [filter, setFilter] = useState<string>("")
+  const [selectedLine, setSelectedLine] = useState<string>("")
   const [notice, setNotice] = useState<string>("")
   const [pendingWorkerName, setPendingWorkerName] = useState<string>("")
 
@@ -40,7 +41,6 @@ export function WorkTab(props: WorkTabProps): ReactElement {
     [form.workerNames, props.data.registeredWorkerNames],
   )
   const joinedRows = useMemo(() => deriveWorkRows(props.data), [props.data])
-  const rows = useMemo(() => filterWorkRows(joinedRows, filter), [filter, joinedRows])
 
   function submit(): void {
     const nextErrors = validateWorkInput(form)
@@ -174,7 +174,9 @@ export function WorkTab(props: WorkTabProps): ReactElement {
         onDelete={deleteReport}
         onEdit={startEdit}
         onFilterChange={setFilter}
-        rows={rows}
+        onLineChange={setSelectedLine}
+        rows={joinedRows}
+        selectedLine={selectedLine}
       />
     </section>
   )
