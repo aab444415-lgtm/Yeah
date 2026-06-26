@@ -82,17 +82,29 @@ function summaryKey(identity: SummaryIdentity): string {
 }
 
 function toSummaryRow(draft: SummaryDraft): SummaryRow {
+  const workReports = uniqueWorkReports(draft.workReports)
   return {
     date: draft.date,
     line: draft.line,
     equipmentUnit: draft.equipmentUnit,
     meterCount: sum(draft.quantityReports.map((report) => report.meterCount)),
     quantityCount: draft.quantityReports.length,
-    workCount: draft.workReports.length,
-    totalWorkers: sum(draft.workReports.map((report) => report.totalWorkers)),
+    workCount: workReports.length,
+    totalWorkers: sum(workReports.map((report) => report.totalWorkers)),
     quantityReports: draft.quantityReports,
-    workReports: draft.workReports,
+    workReports,
   }
+}
+
+function uniqueWorkReports(reports: readonly WorkReportView[]): readonly WorkReportView[] {
+  const seen = new Set<string>()
+  const uniqueReports: WorkReportView[] = []
+  for (const report of reports) {
+    if (seen.has(report.id)) continue
+    seen.add(report.id)
+    uniqueReports.push(report)
+  }
+  return uniqueReports
 }
 
 function compareSummaryRows(left: SummaryRow, right: SummaryRow): number {
